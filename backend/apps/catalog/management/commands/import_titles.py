@@ -20,7 +20,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from apps.catalog.models import Genre, Title
 
-TMDB = 'https://api.themoviedb.org/3'
+TMDB_HOSTS = ['api.themoviedb.org', 'api.tmdb.org']
 TMDB_IMG = 'https://image.tmdb.org/t/p/w500'
 RAWG = 'https://api.rawg.io/api'
 
@@ -79,7 +79,18 @@ class Command(BaseCommand):
             headers['Authorization'] = f'Bearer {key}'
         else:
             params['api_key'] = key
-        return get_json(f'{TMDB}{path}?{urllib.parse.urlencode(params)}', headers)
+        query = urllib.parse.urlencode(params)
+        last = None
+        for host in TMDB_HOSTS:  # the main host is blocked on some networks
+            try:
+                return get_json(f'https://{host}/3{path}?{query}', headers)
+            except urllib.error.HTTPError:
+                raise
+            except urllib.error.URLError as e:
+                last = e
+        raise CommandError(
+            f'Cannot reach TMDB from this network ({last.reason}). '
+            'Try a VPN or a different network (or set DNS to 1.1.1.1), then re-run.')
 
     def import_movies(self, count):
         ids, page = [], 1
