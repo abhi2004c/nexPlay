@@ -16,6 +16,11 @@ PLAYERS_TTL = 5 * 60      # 5 minutes
 STORES_TTL = 24 * 60 * 60
 
 
+EDITION_WORDS = re.compile(
+    r'\b(enhanced|complete|definitive|remaster(ed)?|goty|game of the year|deluxe|ultimate|'
+    r'gold|premium|standard|director.?s cut|edition)\b', re.I)
+
+
 def _norm(s):
     return re.sub(r'[^a-z0-9]+', '', (s or '').lower())
 
@@ -34,15 +39,24 @@ def _resolve(title):
         return True
     if cache.get(f'cs_miss_{title.pk}'):
         return False
-    q = urllib.parse.urlencode({'title': title.name, 'limit': 10})
-    want = _norm(title.name)
-    for g in get_json(f'{CHEAPSHARK}/games?{q}'):
-        if _norm(g.get('external')) == want:
-            title.cheapshark_id = g['gameID']
-            if g.get('steamAppID') and not title.steam_app_id:
-                title.steam_app_id = g['steamAppID']
-            title.save(update_fields=['cheapshark_id', 'steam_app_id'])
-            return True
+    name = re.sub(r'\s*\((19|20)\d\d\)', '', title.name).strip()  # "DOOM (2016)" -> "DOOM"
+    q = urllib.parse.urlencode({'title': name, 'limit': 15})
+    want = _norm(name)
+    results = get_json(f'{CHEAPSHARK}/games?{q}')
+    exact = [g for g in results if _norm(g.get('external')) == want]
+    # Same game sold as an edition: "X" -> "X Enhanced / Complete Edition / GOTY ..."
+    editions = sorted(
+        (g for g in results
+         if _norm(g.get('external')).startswith(want)
+         and EDITION_WORDS.search((g.get('external') or '')[len(name):])),
+        key=lambda g: len(g['external']),
+    )
+    for g in exact + editions:
+        title.cheapshark_id = g['gameID']
+        if g.get('steamAppID') and not title.steam_app_id:
+            title.steam_app_id = g['steamAppID']
+        title.save(update_fields=['cheapshark_id', 'steam_app_id'])
+        return True
     cache.set(f'cs_miss_{title.pk}', True, 6 * 60 * 60)
     return False
 
