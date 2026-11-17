@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import SteamIcon from './SteamIcon.jsx'
 
+const monthName = (ym) =>
+  new Date(`${ym}-01T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', year: '2-digit', timeZone: 'UTC' })
+
+const tone = (p) => (p == null ? 'neutral' : p >= 70 ? 'positive' : p >= 40 ? 'neutral' : 'negative')
+
 export default function SteamReviews({ slug }) {
   const [d, setD] = useState(null)
 
@@ -12,54 +17,59 @@ export default function SteamReviews({ slug }) {
 
   if (d && !d.available) return null
 
+  const s = d?.summary
+  const has = s && s.total > 0
+
   return (
     <section className="panel steampanel">
       <h2><SteamIcon size={22} /> Steam reviews</h2>
       <p className="muted small">
-        These reviews are written by players on Steam, not NexPlay members, and are not included in NexPlay ratings.
+        Review totals from players on Steam, not NexPlay members. They are not included in NexPlay ratings.
       </p>
 
       {!d && <p className="muted">Loading Steam reviews…</p>}
+      {d?.error && <p className="muted">Steam review totals are unavailable right now.</p>}
+      {d && !d.error && !has && <p className="muted">No Steam reviews yet.</p>}
 
-      {d?.error && <p className="muted">Steam reviews are unavailable right now. <a href={d.steam_url} target="_blank" rel="noreferrer">View them on Steam</a>.</p>}
+      {has && (
+        <>
+          <div className="stats">
+            {s.label && <div><span className="muted">Overall</span><strong className={tone(s.percent_positive)}>{s.label}</strong></div>}
+            <div><span className="muted">Positive</span><strong>{s.percent_positive}%</strong></div>
+            <div><span className="muted">Reviews</span><strong>{s.total.toLocaleString()}</strong></div>
+            {d.recent?.percent_positive != null && (
+              <div>
+                <span className="muted">Last 30 days</span>
+                <strong>{d.recent.percent_positive}% positive</strong>
+                <span className="muted">{d.recent.total.toLocaleString()} reviews</span>
+              </div>
+            )}
+          </div>
 
-      {d?.summary && d.summary.total > 0 && (
-        <div className="stats">
-          <div>
-            <span className="muted">Overall</span>
-            <strong>{d.summary.label || '—'}</strong>
+          <div className="sentbar" title={`${s.positive.toLocaleString()} positive, ${s.negative.toLocaleString()} negative`}>
+            <span className="positive" style={{ flex: s.positive }} />
+            <span className="negative" style={{ flex: s.negative }} />
           </div>
-          <div>
-            <span className="muted">Positive</span>
-            <strong>{d.summary.percent_positive}%</strong>
-          </div>
-          <div>
-            <span className="muted">Reviews</span>
-            <strong>{d.summary.total.toLocaleString()}</strong>
-          </div>
-        </div>
+
+          {d.monthly?.length > 1 && (
+            <>
+              <p className="muted small">Share of positive reviews by month</p>
+              <div className="months">
+                {d.monthly.map((m) => (
+                  <div key={m.month} className="mcol" title={`${monthName(m.month)}: ${m.percent_positive ?? '–'}% positive of ${m.total.toLocaleString()}`}>
+                    <div className="mbar"><span className={tone(m.percent_positive)} style={{ height: `${m.percent_positive ?? 0}%` }} /></div>
+                    <small className="muted">{monthName(m.month)}</small>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
       )}
-      {d?.summary?.total > 0 && (
-        <div className="sentbar" title={`${d.summary.positive.toLocaleString()} positive, ${d.summary.negative.toLocaleString()} negative`}>
-          <span className="positive" style={{ flex: d.summary.positive }} />
-          <span className="negative" style={{ flex: d.summary.negative }} />
-        </div>
-      )}
 
-      {d?.reviews?.map((r, i) => (
-        <div className="review" key={i}>
-          <div className="steamhead">
-            <SteamIcon size={16} />
-            <strong className={r.recommended ? 'pos' : 'neg'}>{r.recommended ? 'Recommended' : 'Not recommended'}</strong>
-            <span className="muted">· Steam user · {r.hours} hrs on record{r.helpful ? ` · ${r.helpful.toLocaleString()} found helpful` : ''}</span>
-          </div>
-          <p>{r.text}</p>
-        </div>
-      ))}
-
-      {d && !d.error && (
+      {d && (
         <a className="steamlink" href={d.steam_url} target="_blank" rel="noreferrer">
-          <SteamIcon size={16} /> Read all reviews on Steam
+          <SteamIcon size={16} /> Read the reviews on Steam
         </a>
       )}
     </section>

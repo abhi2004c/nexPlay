@@ -1,63 +1,89 @@
-"""Steam user reviews for a game (public store endpoint). Cached; never raises."""
+"""Steam review totals for a game, from Steam's public review histogram. Cached; never raises.
 
-import re
+Steam only serves individual review text to browsers, so we show the totals, the recent trend and a
+link to read the reviews on Steam.
+"""
+
+from datetime import datetime, timezone
 
 from django.core.cache import cache
 
 from .net import get_json
 
-URL = (
-    'https://store.steampowered.com/appreviews/{id}'
-    '?json=1&language=english&filter=all&review_type=all&purchase_type=all&num_per_page=5'
-)
-TTL = 60 * 60
-BBCODE = re.compile(r'\[/?[a-zA-Z0-9*]+(?:=[^\]]*)?\]')  # [b], [h1], [url=...], [/list] ...
+HISTOGRAM = 'https://store.steampowered.com/appreviewhistogram/{id}?l=english'
+TTL = 6 * 60 * 60
 
 
-def _clean(text, limit=500):
-    text = BBCODE.sub('', text or '')
-    text = re.sub(r'\n{3,}', '\n\n', text).strip()
-    return text if len(text) <= limit else text[:limit].rsplit(' ', 1)[0] + '…'
+def steam_label(positive, total):
+    """Steam's own review-summary scale (rules published by Valve)."""
+    if total == 0:
+        return ''
+    pct = 100 * positive / total
+    if total < 10:
+        return ''  # Steam shows no summary below 10 reviews
+    if pct >= 80:
+        return ('Overwhelmingly Positive' if pct >= 95 and total >= 500
+                else 'Very Positive' if total >= 50 else 'Positive')
+    if pct >= 70:
+        return 'Mostly Positive'
+    if pct >= 40:
+        return 'Mixed'
+    if pct >= 20:
+        return 'Mostly Negative'
+    return ('Overwhelmingly Negative' if total >= 500
+            else 'Very Negative' if total >= 50 else 'Negative')
 
 
-def parse(data):
-    summary = data.get('query_summary') or {}
-    total = summary.get('total_reviews') or 0
-    pos = summary.get('total_positive') or 0
+def _pct(up, down):
+    return round(100 * up / (up + down)) if (up + down) else None
+
+
+def parse(results):
+    rollups = results.get('rollups') or []
+    up = sum(r.get('recommendations_up', 0) for r in rollups)
+    down = sum(r.get('recommendations_down', 0) for r in rollups)
+    total = up + down
+
+    recent = (results.get('recent') or [])[-30:]
+    r_up = sum(r.get('recommendations_up', 0) for r in recent)
+    r_down = sum(r.get('recommendations_down', 0) for r in recent)
+
+    monthly = [{
+        'month': datetime.fromtimestamp(r['date'], tz=timezone.utc).strftime('%Y-%m'),
+        'percent_positive': _pct(r.get('recommendations_up', 0), r.get('recommendations_down', 0)),
+        'total': r.get('recommendations_up', 0) + r.get('recommendations_down', 0),
+    } for r in rollups[-12:] if r.get('date')]
+
     return {
         'summary': {
-            'label': summary.get('review_score_desc') or '',
+            'label': steam_label(up, total),
             'total': total,
-            'positive': pos,
-            'negative': summary.get('total_negative') or 0,
-            'percent_positive': round(100 * pos / total) if total else None,
+            'positive': up,
+            'negative': down,
+            'percent_positive': _pct(up, down),
         },
-        'reviews': [{
-            'text': _clean(r.get('review')),
-            'recommended': bool(r.get('voted_up')),
-            'hours': round((r.get('author') or {}).get('playtime_forever', 0) / 60, 1),
-            'helpful': r.get('votes_up', 0),
-            'posted': r.get('timestamp_created'),
-        } for r in data.get('reviews', []) if (r.get('review') or '').strip()],
+        'recent': {'days': 30, 'total': r_up + r_down, 'percent_positive': _pct(r_up, r_down)},
+        'monthly': monthly,
     }
 
 
 def steam_reviews_payload(title):
     if not title.steam_app_id:
         return {'available': False}
-    key = f'steam_reviews_{title.steam_app_id}'
+    key = f'steam_hist_{title.steam_app_id}'
     cached = cache.get(key)
     if cached is not None:
         return cached
     base = {'available': True, 'steam_url': f'https://store.steampowered.com/app/{title.steam_app_id}#app_reviews_hash'}
     try:
-        data = get_json(URL.format(id=title.steam_app_id))
+        data = get_json(HISTOGRAM.format(id=title.steam_app_id))
         if not data.get('success'):
             raise ValueError('no data')
-        payload = {**base, **parse(data), 'error': None}
+        payload = {**base, **parse(data.get('results') or {}), 'error': None}
         cache.set(key, payload, TTL)
         return payload
     except Exception as e:  # Steam down / blocked: degrade gracefully (short cache)
-        payload = {**base, 'summary': None, 'reviews': [], 'error': f'Steam reviews unavailable ({type(e).__name__})'}
+        payload = {**base, 'summary': None, 'recent': None, 'monthly': [],
+                   'error': f'Steam reviews unavailable ({type(e).__name__})'}
         cache.set(key, payload, 120)
         return payload
