@@ -33,6 +33,10 @@ export default function App() {
           <Route path="/watchlist" element={<Watchlist />} />
         </Routes>
       </main>
+      <footer className="foot muted">
+        Movie data from <a href="https://www.themoviedb.org">TMDB</a> (not endorsed or certified by TMDB) ·
+        Game data from <a href="https://rawg.io">RAWG</a>
+      </footer>
     </>
   )
 }

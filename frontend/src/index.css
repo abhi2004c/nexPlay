@@ -51,3 +51,5 @@ form.inline input { flex: 1; margin: 0; }
 .sentbar .positive { background: #3ecf8e; }
 .sentbar .neutral { background: #8b91a1; }
 .sentbar .negative { background: #ff6b6b; }
+.foot { text-align: center; padding: 24px 16px 40px; font-size: 13px; }
+.foot a { text-decoration: underline; }
