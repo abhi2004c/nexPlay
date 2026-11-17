@@ -147,7 +147,7 @@ export default function Reviews({ slug, onChange }) {
         <div className="review mine">
           <div className="steamhead">
             <strong>Your review</strong> <span className="score">★ {mine.rating}</span>
-            <span className="muted small">· {when(mine.updated_at)}{mine.helpful_count ? ` · 👍 ${mine.helpful_count} found helpful` : ''}</span>
+            <span className="muted small">· {when(mine.updated_at)}{mine.helpful_count ? ` · 👍 ${mine.helpful_count}` : ''}{mine.unhelpful_count ? ` · 👎 ${mine.unhelpful_count}` : ''}</span>
           </div>
           {editing ? (
             <ReviewForm initial={mine} submitLabel="Save changes" onSubmit={save} onCancel={() => setEditing(false)} />
