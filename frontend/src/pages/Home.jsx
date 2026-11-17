@@ -10,6 +10,8 @@ export default function Home() {
   const [titles, setTitles] = useState([])
   const [error, setError] = useState('')
   const [recs, setRecs] = useState(null)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -17,16 +19,22 @@ export default function Home() {
   }, [user])
 
   useEffect(() => {
-    const q = new URLSearchParams({ ordering })
+    const q = new URLSearchParams({ ordering, page })
     if (type) q.set('media_type', type)
     if (search) q.set('search', search)
     const id = setTimeout(() => {
       api(`/titles/?${q}`)
-        .then((d) => { setTitles(d.results); setError('') })
+        .then((d) => {
+          setTitles((prev) => (page === 1 ? d.results : [...prev, ...d.results]))
+          setHasMore(Boolean(d.next))
+          setError('')
+        })
         .catch((e) => setError(e.message))
     }, 250)
     return () => clearTimeout(id)
-  }, [type, search, ordering])
+  }, [type, search, ordering, page])
+
+  const change = (setter) => (value) => { setter(value); setPage(1) }
 
   return (
     <>
@@ -42,10 +50,10 @@ export default function Home() {
       <h2>Browse</h2>
       <div className="filters">
         {[['', 'All'], ['movie', 'Movies'], ['game', 'Games']].map(([v, l]) => (
-          <button key={v} className={type === v ? 'btn' : 'ghost'} onClick={() => setType(v)}>{l}</button>
+          <button key={v} className={type === v ? 'btn' : 'ghost'} onClick={() => change(setType)(v)}>{l}</button>
         ))}
-        <input placeholder="Search titles…" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <select value={ordering} onChange={(e) => setOrdering(e.target.value)}>
+        <input placeholder="Search titles…" value={search} onChange={(e) => change(setSearch)(e.target.value)} />
+        <select value={ordering} onChange={(e) => change(setOrdering)(e.target.value)}>
           <option value="-release_date">Newest</option>
           <option value="-avg_rating">Top rated</option>
           <option value="name">A–Z</option>
@@ -54,6 +62,11 @@ export default function Home() {
       {error && <p className="error">Could not reach the API: {error}</p>}
       <div className="grid">{titles.map((t) => <TitleCard key={t.id} t={t} />)}</div>
       {!error && titles.length === 0 && <p className="muted">Nothing found.</p>}
+      {hasMore && (
+        <p style={{ textAlign: 'center' }}>
+          <button className="ghost" onClick={() => setPage(page + 1)}>Load more</button>
+        </p>
+      )}
     </>
   )
 }
