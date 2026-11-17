@@ -2,6 +2,8 @@
 
 from collections import defaultdict
 
+from django.db.models import Count
+
 from apps.community.models import WatchlistItem
 from apps.reviews.models import Review
 
@@ -13,7 +15,13 @@ def similar_titles(title, limit=6):
     if not genres:
         return []
     scored = []
-    for t in Title.objects.exclude(pk=title.pk).prefetch_related('genres'):
+    # Only titles that share a genre, best overlap first, instead of scanning the whole catalog.
+    candidates = (
+        Title.objects.exclude(pk=title.pk).filter(genres__in=genres)
+        .annotate(shared=Count('genres')).order_by('-shared', '-avg_rating')[:40]
+        .prefetch_related('genres')
+    )
+    for t in candidates:
         g = {x.id for x in t.genres.all()}
         union = genres | g
         jaccard = len(genres & g) / len(union) if union else 0

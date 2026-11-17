@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth.jsx'
@@ -19,21 +19,26 @@ export default function TitlePage() {
   const [analysis, setAnalysis] = useState(null)
   const [similar, setSimilar] = useState([])
 
-  const load = useCallback(async () => {
-    const [title, r, th, an, sim] = await Promise.all([
-      api(`/titles/${slug}/`),
-      api(`/reviews/?title=${slug}`),
-      api(`/threads/?title=${slug}`),
-      api(`/titles/${slug}/analysis/`),
-      api(`/titles/${slug}/similar/`),
+  // Each part loads and renders on its own, so the title shows as soon as it arrives.
+  const current = useRef(slug)
+  const load = useCallback(() => {
+    const ifCurrent = (fn) => (d) => { if (current.current === slug) fn(d) }
+    return Promise.all([
+      api(`/titles/${slug}/`).then(ifCurrent(setT)),
+      api(`/reviews/?title=${slug}`).then(ifCurrent((r) => setReviews(r.results))),
+      api(`/threads/?title=${slug}`).then(ifCurrent((r) => setThreads(r.results))),
+      api(`/titles/${slug}/analysis/`).then(ifCurrent(setAnalysis)),
+      api(`/titles/${slug}/similar/`).then(ifCurrent(setSimilar)),
     ])
-    setAnalysis(an)
-    setSimilar(sim)
-    setT(title)
-    setReviews(r.results)
-    setThreads(th.results)
   }, [slug])
-  useEffect(() => { load().catch((e) => setMsg(e.message)) }, [load])
+
+  useEffect(() => {
+    current.current = slug
+    // clear the previous title right away instead of showing it while the new one loads
+    setT(null); setReviews([]); setThreads([]); setAnalysis(null); setSimilar([]); setMsg('')
+    window.scrollTo(0, 0)
+    load().catch((e) => setMsg(e.message))
+  }, [slug, load])
 
   const run = (fn, ok) => async (e) => {
     e?.preventDefault()

@@ -37,7 +37,9 @@ class TitleViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'slug'
 
     def get_queryset(self):
-        qs = Title.objects.prefetch_related('genres')
+        qs = Title.objects.all()
+        if self.action in ('list', 'retrieve'):  # extra actions don't need the genre prefetch
+            qs = qs.prefetch_related('genres')
         p = self.request.query_params
         if p.get('media_type'):
             qs = qs.filter(media_type=p['media_type'])
