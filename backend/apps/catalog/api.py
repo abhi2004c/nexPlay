@@ -1,5 +1,12 @@
 from rest_framework import serializers, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.reviews.analysis import analyze
+
+from .recommend import recommend_for, similar_titles
 
 from .models import Genre, Title
 
@@ -41,6 +48,28 @@ class TitleViewSet(viewsets.ReadOnlyModelViewSet):
         if ordering in {'avg_rating', '-avg_rating', 'release_date', '-release_date', 'name'}:
             qs = qs.order_by(ordering)
         return qs
+
+
+    @action(detail=True, methods=['get'])
+    def analysis(self, request, slug=None):
+        return Response(analyze(self.get_object().reviews.all()))
+
+    @action(detail=True, methods=['get'])
+    def similar(self, request, slug=None):
+        return Response(TitleSerializer(similar_titles(self.get_object()), many=True).data)
+
+
+class RecommendationsView(APIView):
+    """Personalized for logged-in users; top-rated fallback otherwise."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if request.user.is_authenticated:
+            titles, personalized = recommend_for(request.user)
+        else:
+            titles, personalized = list(Title.objects.order_by('-avg_rating', '-rating_count')[:10]), False
+        return Response({'personalized': personalized, 'results': TitleSerializer(titles, many=True).data})
 
 
 class GenreViewSet(viewsets.ReadOnlyModelViewSet):

@@ -44,3 +44,10 @@ textarea { width: 100%; min-height: 80px; margin: 8px 0; }
 form.inline { display: flex; gap: 8px; margin-left: 16px; }
 form.inline input { flex: 1; margin: 0; }
 @media (max-width: 640px) { .detail { grid-template-columns: 1fr; } .poster.big { max-width: 200px; } }
+.rail { margin-bottom: 28px; }
+.scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; }
+.scroll .card { flex: 0 0 160px; }
+.sentbar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; margin: 8px 0 12px; background: var(--line); }
+.sentbar .positive { background: #3ecf8e; }
+.sentbar .neutral { background: #8b91a1; }
+.sentbar .negative { background: #ff6b6b; }

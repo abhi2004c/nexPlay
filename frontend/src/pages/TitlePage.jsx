@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth.jsx'
+import TitleCard from '../components/TitleCard.jsx'
 
 export default function TitlePage() {
   const { slug } = useParams()
@@ -14,13 +15,19 @@ export default function TitlePage() {
   const [subject, setSubject] = useState('')
   const [tbody, setTbody] = useState('')
   const [msg, setMsg] = useState('')
+  const [analysis, setAnalysis] = useState(null)
+  const [similar, setSimilar] = useState([])
 
   const load = useCallback(async () => {
-    const [title, r, th] = await Promise.all([
+    const [title, r, th, an, sim] = await Promise.all([
       api(`/titles/${slug}/`),
       api(`/reviews/?title=${slug}`),
       api(`/threads/?title=${slug}`),
+      api(`/titles/${slug}/analysis/`),
+      api(`/titles/${slug}/similar/`),
     ])
+    setAnalysis(an)
+    setSimilar(sim)
     setT(title)
     setReviews(r.results)
     setThreads(th.results)
@@ -69,6 +76,21 @@ export default function TitlePage() {
           {msg && <p className="muted">{msg}</p>}
         </div>
       </div>
+
+      {analysis && (
+        <section className="panel">
+          <h2>Review analysis</h2>
+          <p>{analysis.summary}</p>
+          {analysis.positive + analysis.neutral + analysis.negative > 0 && (
+            <div className="sentbar">
+              {['positive', 'neutral', 'negative'].map((k) => (
+                <span key={k} className={k} style={{ flex: analysis[k] }} title={`${k}: ${analysis[k]}`} />
+              ))}
+            </div>
+          )}
+          <p>{analysis.keywords.map((k) => <span className="tag" key={k}>{k}</span>)}</p>
+        </section>
+      )}
 
       <section className="panel">
         <h2>Reviews</h2>
@@ -119,6 +141,13 @@ export default function TitlePage() {
         {threads.map((th) => <Thread key={th.id} th={th} user={user} />)}
         {threads.length === 0 && <p className="muted">No threads yet.</p>}
       </section>
+
+      {similar.length > 0 && (
+        <section className="rail">
+          <h2>More like this</h2>
+          <div className="scroll">{similar.map((s) => <TitleCard key={s.id} t={s} />)}</div>
+        </section>
+      )}
     </>
   )
 }

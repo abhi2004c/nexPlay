@@ -3,6 +3,7 @@ from rest_framework import permissions, serializers, viewsets
 
 from apps.catalog.models import Title
 
+from .analysis import sentiment_score
 from .models import Review
 
 
@@ -54,11 +55,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        review = serializer.save(user=self.request.user)
+        review = serializer.save(user=self.request.user, sentiment=sentiment_score(serializer.validated_data.get('body')))
         refresh_title_rating(review.title)
 
     def perform_update(self, serializer):
-        review = serializer.save()
+        review = serializer.save(sentiment=sentiment_score(serializer.validated_data.get('body', serializer.instance.body)))
         refresh_title_rating(review.title)
 
     def perform_destroy(self, instance):
