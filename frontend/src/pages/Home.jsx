@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import TitleCard from '../components/TitleCard.jsx'
 import { useAuth } from '../auth.jsx'
+import ExternalSearch from '../components/ExternalSearch.jsx'
 
 export default function Home() {
   const [type, setType] = useState('')
@@ -62,6 +63,7 @@ export default function Home() {
       {error && <p className="error">Could not reach the API: {error}</p>}
       <div className="grid">{titles.map((t) => <TitleCard key={t.id} t={t} />)}</div>
       {!error && titles.length === 0 && <p className="muted">Nothing found.</p>}
+      {search.trim().length >= 2 && <ExternalSearch query={search.trim()} type={type} />}
       {hasMore && (
         <p style={{ textAlign: 'center' }}>
           <button className="ghost" onClick={() => setPage(page + 1)}>Load more</button>

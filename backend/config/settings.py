@@ -95,6 +95,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticatedOrReadOnly'],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_RATES': {
+        'external_search': '60/hour',   # per logged-in user
+        'external_import': '20/day',    # per logged-in user
+    },
 }
 
 from datetime import timedelta  # noqa: E402
