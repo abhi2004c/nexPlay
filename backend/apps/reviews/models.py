@@ -26,7 +26,11 @@ class ReviewVote(models.Model):
 
     review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='votes')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='review_votes')
+    value = models.SmallIntegerField(default=1)  # +1 helpful, -1 not helpful
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=['review', 'user'], name='one_vote_per_user_review')]
+        constraints = [
+            models.UniqueConstraint(fields=['review', 'user'], name='one_vote_per_user_review'),
+            models.CheckConstraint(condition=models.Q(value__in=[1, -1]), name='vote_value_is_plus_or_minus_one'),
+        ]

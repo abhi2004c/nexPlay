@@ -1,5 +1,6 @@
 from django.db import IntegrityError
-from django.db.models import Avg, Count, Exists, OuterRef, Value, BooleanField
+from django.db.models import Avg, Count, F, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Coalesce
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -23,26 +24,34 @@ class ReviewSerializer(serializers.ModelSerializer):
         source='title', slug_field='slug', queryset=Title.objects.all()
     )
     helpful_count = serializers.SerializerMethodField()
-    voted_by_me = serializers.SerializerMethodField()
+    unhelpful_count = serializers.SerializerMethodField()
+    my_vote = serializers.SerializerMethodField()  # 1, -1 or 0
     is_mine = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ('id', 'username', 'title_slug', 'rating', 'body', 'contains_spoilers',
-                  'sentiment', 'helpful_count', 'voted_by_me', 'is_mine', 'created_at', 'updated_at')
+        fields = ('id', 'username', 'title_slug', 'rating', 'body', 'contains_spoilers', 'sentiment',
+                  'helpful_count', 'unhelpful_count', 'my_vote', 'is_mine', 'created_at', 'updated_at')
         read_only_fields = ('sentiment',)
 
-    # Annotated by the viewset on list/retrieve; falls back to a query right after create/update.
+    # Annotated by the viewset on list/retrieve; falls back to queries right after create/update.
     def get_helpful_count(self, obj):
         n = getattr(obj, 'helpful_count', None)
-        return n if n is not None else obj.votes.count()
+        return n if n is not None else obj.votes.filter(value=1).count()
 
-    def get_voted_by_me(self, obj):
-        v = getattr(obj, 'voted_by_me', None)
+    def get_unhelpful_count(self, obj):
+        n = getattr(obj, 'unhelpful_count', None)
+        return n if n is not None else obj.votes.filter(value=-1).count()
+
+    def get_my_vote(self, obj):
+        v = getattr(obj, 'my_vote', None)
         if v is not None:
-            return bool(v)
+            return v
         user = self.context['request'].user
-        return user.is_authenticated and obj.votes.filter(user=user).exists()
+        if not user.is_authenticated:
+            return 0
+        vote = obj.votes.filter(user=user).first()
+        return vote.value if vote else 0
 
     def get_is_mine(self, obj):
         return obj.user_id == self.context['request'].user.id
@@ -67,7 +76,7 @@ def refresh_title_rating(title):
 
 ORDERINGS = {
     'newest': ('-created_at',),
-    'helpful': ('-helpful_count', '-created_at'),
+    'helpful': ('-score', '-created_at'),  # net votes: helpful minus not helpful
     'rating_desc': ('-rating', '-created_at'),
     'rating_asc': ('rating', '-created_at'),
 }
@@ -81,13 +90,18 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if user.is_authenticated:
+            my_vote = Coalesce(
+                Subquery(ReviewVote.objects.filter(review=OuterRef('pk'), user=user).values('value')[:1]),
+                Value(0), output_field=IntegerField(),
+            )
+        else:
+            my_vote = Value(0, output_field=IntegerField())
         qs = Review.objects.select_related('user', 'title').annotate(
-            helpful_count=Count('votes', distinct=True),
-            voted_by_me=(
-                Exists(ReviewVote.objects.filter(review=OuterRef('pk'), user=user))
-                if user.is_authenticated else Value(False, output_field=BooleanField())
-            ),
-        )
+            helpful_count=Count('votes', filter=Q(votes__value=1)),
+            unhelpful_count=Count('votes', filter=Q(votes__value=-1)),
+            my_vote=my_vote,
+        ).annotate(score=F('helpful_count') - F('unhelpful_count'))
         p = self.request.query_params
         if p.get('title'):
             qs = qs.filter(title__slug=p['title'])
@@ -117,11 +131,32 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def vote(self, request, pk=None):
-        """Toggle a 'helpful' vote on someone else's review."""
+        """Vote on someone else's review: {"value": 1} helpful, {"value": -1} not helpful.
+
+        Sending the same value again removes the vote; the other value switches it.
+        """
         review = self.get_object()
         if review.user_id == request.user.id:
             return Response({'detail': 'You cannot vote on your own review.'}, status=400)
-        vote, created = ReviewVote.objects.get_or_create(review=review, user=request.user)
-        if not created:
+        try:
+            value = int(request.data.get('value', 1))
+        except (TypeError, ValueError):
+            value = 0
+        if value not in (1, -1):
+            return Response({'detail': 'value must be 1 or -1.'}, status=400)
+
+        vote, created = ReviewVote.objects.get_or_create(review=review, user=request.user, defaults={'value': value})
+        if created:
+            my_vote = value
+        elif vote.value == value:
             vote.delete()
-        return Response({'voted_by_me': created, 'helpful_count': review.votes.count()})
+            my_vote = 0
+        else:
+            vote.value = value
+            vote.save(update_fields=['value'])
+            my_vote = value
+        return Response({
+            'my_vote': my_vote,
+            'helpful_count': review.votes.filter(value=1).count(),
+            'unhelpful_count': review.votes.filter(value=-1).count(),
+        })

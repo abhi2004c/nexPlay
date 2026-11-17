@@ -98,3 +98,5 @@ th { color: var(--muted); font-weight: 500; font-size: 13px; border-top: 0; }
 .helpful:disabled { opacity: .5; cursor: not-allowed; }
 button.danger { background: #c0392b; }
 .panel .actions { align-items: center; }
+.votes { display: inline-flex; gap: 8px; }
+.helpful.off { border-color: #ff6b6b; background: rgba(255, 107, 107, .18); }

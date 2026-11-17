@@ -46,13 +46,30 @@ function ReviewForm({ initial, submitLabel, onSubmit, onCancel }) {
   )
 }
 
-function HelpfulButton({ r, user, onVote }) {
+function VoteButtons({ r, user, onVote }) {
   const disabled = !user || r.is_mine
-  const title = !user ? 'Log in to vote' : r.is_mine ? 'You cannot vote on your own review' : 'Mark as helpful'
+  const why = !user ? 'Log in to vote' : r.is_mine ? 'You cannot vote on your own review' : ''
   return (
-    <button className={r.voted_by_me ? 'helpful on' : 'helpful'} disabled={disabled} title={title} onClick={() => onVote(r)}>
-      👍 Helpful{r.helpful_count > 0 ? ` · ${r.helpful_count}` : ''}
-    </button>
+    <span className="votes">
+      <button
+        className={r.my_vote === 1 ? 'helpful on' : 'helpful'}
+        disabled={disabled}
+        title={why || (r.my_vote === 1 ? 'Remove your helpful vote' : 'Helpful')}
+        aria-pressed={r.my_vote === 1}
+        onClick={() => onVote(r, 1)}
+      >
+        👍 Helpful{r.helpful_count > 0 ? ` · ${r.helpful_count}` : ''}
+      </button>
+      <button
+        className={r.my_vote === -1 ? 'helpful off' : 'helpful'}
+        disabled={disabled}
+        title={why || (r.my_vote === -1 ? 'Remove your not-helpful vote' : 'Not helpful')}
+        aria-pressed={r.my_vote === -1}
+        onClick={() => onVote(r, -1)}
+      >
+        👎{r.unhelpful_count > 0 ? ` · ${r.unhelpful_count}` : ''}
+      </button>
+    </span>
   )
 }
 
@@ -106,9 +123,9 @@ export default function Reviews({ slug, onChange }) {
       setError(e.message)
     }
   }
-  const vote = async (r) => {
+  const vote = async (r, value) => {
     try {
-      const v = await api(`/reviews/${r.id}/vote/`, { method: 'POST' })
+      const v = await api(`/reviews/${r.id}/vote/`, { method: 'POST', body: { value } })
       setItems((prev) => prev.map((x) => (x.id === r.id ? { ...x, ...v } : x)))
     } catch (e) {
       setError(e.message)
@@ -169,7 +186,7 @@ export default function Reviews({ slug, onChange }) {
           <strong>{r.username}</strong> <span className="score">★ {r.rating}</span>
           <span className="muted small"> · {when(r.created_at)}</span>
           <p>{r.body}</p>
-          <HelpfulButton r={r} user={user} onVote={vote} />
+          <VoteButtons r={r} user={user} onVote={vote} />
         </div>
       ))}
       {items.length === 0 && !mine && <p className="muted">No reviews yet. Be the first.</p>}
