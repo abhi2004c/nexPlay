@@ -6,15 +6,13 @@ import TitleCard from '../components/TitleCard.jsx'
 import Deals from '../components/Deals.jsx'
 import Media from '../components/Media.jsx'
 import SteamReviews from '../components/SteamReviews.jsx'
+import Reviews from '../components/Reviews.jsx'
 
 export default function TitlePage() {
   const { slug } = useParams()
   const { user } = useAuth()
   const [t, setT] = useState(null)
-  const [reviews, setReviews] = useState([])
   const [threads, setThreads] = useState([])
-  const [rating, setRating] = useState(8)
-  const [body, setBody] = useState('')
   const [subject, setSubject] = useState('')
   const [tbody, setTbody] = useState('')
   const [msg, setMsg] = useState('')
@@ -27,7 +25,6 @@ export default function TitlePage() {
     const ifCurrent = (fn) => (d) => { if (current.current === slug) fn(d) }
     return Promise.all([
       api(`/titles/${slug}/`).then(ifCurrent(setT)),
-      api(`/reviews/?title=${slug}`).then(ifCurrent((r) => setReviews(r.results))),
       api(`/threads/?title=${slug}`).then(ifCurrent((r) => setThreads(r.results))),
       api(`/titles/${slug}/analysis/`).then(ifCurrent(setAnalysis)),
       api(`/titles/${slug}/similar/`).then(ifCurrent(setSimilar)),
@@ -37,7 +34,7 @@ export default function TitlePage() {
   useEffect(() => {
     current.current = slug
     // clear the previous title right away instead of showing it while the new one loads
-    setT(null); setReviews([]); setThreads([]); setAnalysis(null); setSimilar([]); setMsg('')
+    setT(null); setThreads([]); setAnalysis(null); setSimilar([]); setMsg('')
     window.scrollTo(0, 0)
     load().catch((e) => setMsg(e.message))
   }, [slug, load])
@@ -111,35 +108,7 @@ export default function TitlePage() {
         </section>
       )}
 
-      <section className="panel">
-        <h2>Reviews</h2>
-        {user ? (
-          <form
-            onSubmit={run(
-              () => api('/reviews/', { method: 'POST', body: { title_slug: slug, rating: Number(rating), body } }),
-              'Review posted',
-            )}
-          >
-            <label>
-              Rating{' '}
-              <select value={rating} onChange={(e) => setRating(e.target.value)}>
-                {[...Array(10)].map((_, i) => <option key={i + 1}>{i + 1}</option>)}
-              </select>{' '}
-              / 10
-            </label>
-            <textarea placeholder="Write your review…" value={body} onChange={(e) => setBody(e.target.value)} />
-            <button className="btn">Post review</button>
-          </form>
-        ) : (
-          <p><Link to="/login">Log in</Link> to review.</p>
-        )}
-        {reviews.map((r) => (
-          <div className="review" key={r.id}>
-            <strong>{r.username}</strong> <span className="score">★ {r.rating}</span>
-            <p>{r.body}</p>
-          </div>
-        ))}
-      </section>
+      <Reviews slug={slug} onChange={() => load().catch(() => {})} />
 
       <section className="panel">
         <h2>Discussion</h2>

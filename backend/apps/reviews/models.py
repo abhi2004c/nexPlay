@@ -19,3 +19,14 @@ class Review(models.Model):
 
     def __str__(self):
         return f'{self.user} -> {self.title}: {self.rating}'
+
+
+class ReviewVote(models.Model):
+    """A user marking someone else's review as helpful (one vote per user per review)."""
+
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='votes')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='review_votes')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['review', 'user'], name='one_vote_per_user_review')]
