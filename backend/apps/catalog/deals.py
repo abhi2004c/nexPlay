@@ -111,9 +111,12 @@ def get_players(title):
 
 
 def deals_payload(title):
-    payload = {'available': True, 'error': None}
+    payload = {'available': True, 'error': None, 'free': title.is_free, 'links': title.store_links or []}
     try:
-        payload.update(get_prices(title))
+        if title.is_free:  # nothing to price-compare
+            payload.update(found=False, deals=[], lowest_ever=None, current_lowest=None, currency='USD')
+        else:
+            payload.update(get_prices(title))
     except Exception as e:  # network / API failure: degrade gracefully
         payload.update(found=False, deals=[], lowest_ever=None, current_lowest=None,
                        currency='USD', error=f'Price lookup failed: {type(e).__name__}')

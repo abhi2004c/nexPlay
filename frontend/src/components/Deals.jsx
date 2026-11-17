@@ -19,6 +19,33 @@ export default function Deals({ slug }) {
   if (!d) return <section className="panel"><h2>Where to buy</h2><p className="muted">Checking prices…</p></section>
   if (!d.available) return null
 
+  if (d.free) {
+    return (
+      <section className="panel">
+        <h2>Where to play</h2>
+        <div className="stats">
+          <div><span className="muted">Price</span><strong className="freebadge">Free to play</strong></div>
+          {d.current_players != null && (
+            <div>
+              <span className="muted">Playing now (Steam)</span>
+              <strong>{d.current_players.toLocaleString()}</strong>
+            </div>
+          )}
+        </div>
+        {d.links.length > 0 ? (
+          <p className="actions">
+            {d.links.map((l) => (
+              <a key={l.url} className="btn" href={l.url} target="_blank" rel="noreferrer">Get it on {l.name}</a>
+            ))}
+          </p>
+        ) : (
+          <p className="muted">No download links on file.</p>
+        )}
+        <p className="muted small">Some free-to-play games include optional in-game purchases.</p>
+      </section>
+    )
+  }
+
   const best = d.current_lowest
   const atLow = d.lowest_ever && best != null && best <= d.lowest_ever.price
 

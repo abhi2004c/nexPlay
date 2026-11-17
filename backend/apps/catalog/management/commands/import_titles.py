@@ -9,6 +9,7 @@ Safe to re-run: titles are matched on (media_type, external_id) and updated.
 """
 
 import os
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -112,7 +113,12 @@ class Command(BaseCommand):
             page += 1
         for rawg_id in ids[:count]:
             d = self.rawg(f'/games/{rawg_id}')
+            is_free = any(t.get('slug') == 'free-to-play' for t in d.get('tags', []))
+            links, steam_id = (self.free_game_links(rawg_id) if is_free else ([], ''))
             self.save(d['name'], 'game', str(rawg_id), dict(
+                is_free=is_free,
+                store_links=links,
+                **({'steam_app_id': steam_id} if steam_id else {}),
                 description=(d.get('description_raw') or '')[:2000],
                 release_date=parse_date(d.get('released')),
                 poster_url=d.get('background_image') or '',
@@ -120,6 +126,22 @@ class Command(BaseCommand):
                 platforms=', '.join(p['platform']['name'] for p in d.get('platforms', []) or [])[:200],
             ), [g['name'] for g in d.get('genres', [])])
         self.stdout.write(f'Imported {min(count, len(ids))} games')
+
+    RAWG_STORES = {1: 'Steam', 2: 'Xbox Store', 3: 'PlayStation Store', 4: 'App Store', 5: 'GOG',
+                   6: 'Nintendo eShop', 8: 'Google Play', 9: 'itch.io', 11: 'Epic Games Store'}
+
+    def free_game_links(self, rawg_id):
+        """Where a free-to-play game can be downloaded, plus its Steam app id if it is on Steam."""
+        links, steam_id = [], ''
+        for r in self.rawg(f'/games/{rawg_id}/stores').get('results', []):
+            url = (r.get('url') or '').replace('http://', 'https://')
+            if not url:
+                continue
+            links.append({'name': self.RAWG_STORES.get(r.get('store_id'), 'Store'), 'url': url})
+            m = re.search(r'store\.steampowered\.com/app/(\d+)', url)
+            if m:
+                steam_id = m.group(1)
+        return links, steam_id
 
     # ---------------------------------------------------------------------
     def save(self, name, media_type, external_id, fields, genre_names):
