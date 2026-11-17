@@ -4,6 +4,8 @@ import { api } from '../api'
 import { useAuth } from '../auth.jsx'
 import TitleCard from '../components/TitleCard.jsx'
 import Deals from '../components/Deals.jsx'
+import Media from '../components/Media.jsx'
+import SteamReviews from '../components/SteamReviews.jsx'
 
 export default function TitlePage() {
   const { slug } = useParams()
@@ -71,6 +73,13 @@ export default function TitlePage() {
           <p className="score">
             ★ {t.rating_count ? t.avg_rating : '–'} <span className="muted">({t.rating_count} reviews)</span>
           </p>
+          {t.metacritic != null && (
+            <p>
+              <a className="metabadge" href={t.metacritic_url || undefined} target="_blank" rel="noreferrer" title="Metacritic score">
+                <b className={t.metacritic >= 75 ? 'good' : t.metacritic >= 50 ? 'mid' : 'bad'}>{t.metacritic}</b> Metacritic
+              </a>
+            </p>
+          )}
           {user && (
             <button
               className="btn"
@@ -83,7 +92,9 @@ export default function TitlePage() {
         </div>
       </div>
 
+      {t.media_type === 'game' && <Media slug={slug} />}
       {t.media_type === 'game' && <Deals slug={slug} />}
+      {t.media_type === 'game' && t.steam_app_id && <SteamReviews slug={slug} />}
 
       {analysis && (
         <section className="panel">

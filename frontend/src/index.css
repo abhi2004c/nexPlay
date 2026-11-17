@@ -64,3 +64,22 @@ th { color: var(--muted); font-weight: 500; font-size: 13px; border-top: 0; }
 .panel a:not(.btn) { text-decoration: underline; }
 .freebadge { color: #3ecf8e; }
 .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.steamicon { vertical-align: -3px; }
+.steampanel h2 { display: flex; align-items: center; gap: 8px; }
+.steamhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pos { color: #3ecf8e; } .neg { color: #ff6b6b; }
+.steamlink { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; text-decoration: underline; }
+.metabadge { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; }
+.metabadge b { padding: 2px 8px; border-radius: 6px; color: #0e1015; }
+.metabadge .good { background: #66cc33; } .metabadge .mid { background: #ffcc33; } .metabadge .bad { background: #ff6b6b; }
+.trailers { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.trailer { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 10px; overflow: hidden; padding: 0; display: block; color: #fff; }
+.trailer img { width: 100%; height: 100%; object-fit: cover; }
+.trailer .play { position: absolute; inset: 0; display: grid; place-items: center; font-size: 42px; background: rgba(0,0,0,.25); }
+.trailer em { position: absolute; left: 10px; bottom: 8px; font-style: normal; font-size: 13px; text-shadow: 0 1px 3px #000; }
+.trailer.fallback span { position: absolute; inset: auto 0 0 0; padding: 8px 12px; background: rgba(0,0,0,.7); font-size: 13px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.shots button { padding: 0; background: none; border-radius: 8px; overflow: hidden; aspect-ratio: 16 / 9; }
+.shots img { width: 100%; height: 100%; object-fit: cover; transition: transform .15s; } .shots button:hover img { transform: scale(1.05); }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 20; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; padding: 16px; }
+.lightbox img { max-width: 100%; max-height: 85vh; border-radius: 8px; }

@@ -30,6 +30,9 @@ class Title(models.Model):
     steam_app_id = models.CharField(max_length=20, blank=True)  # for player counts
     cheapshark_id = models.CharField(max_length=30, blank=True)  # for prices
     is_free = models.BooleanField(default=False)  # free-to-play game
+    screenshots = models.JSONField(default=list, blank=True)  # [url, ...]
+    metacritic = models.PositiveSmallIntegerField(null=True, blank=True)
+    metacritic_url = models.URLField(blank=True)
     store_links = models.JSONField(default=list, blank=True)  # [{'name','url'}] for free games
     avg_rating = models.FloatField(default=0)
     rating_count = models.PositiveIntegerField(default=0)

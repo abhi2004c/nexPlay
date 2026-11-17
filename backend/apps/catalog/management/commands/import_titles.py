@@ -114,10 +114,14 @@ class Command(BaseCommand):
         for rawg_id in ids[:count]:
             d = self.rawg(f'/games/{rawg_id}')
             is_free = any(t.get('slug') == 'free-to-play' for t in d.get('tags', []))
-            links, steam_id = (self.free_game_links(rawg_id) if is_free else ([], ''))
+            links, steam_id = self.free_game_links(rawg_id)  # store links + Steam app id for every game
+            shots = [x['image'] for x in self.rawg(f'/games/{rawg_id}/screenshots').get('results', [])][:10]
             self.save(d['name'], 'game', str(rawg_id), dict(
                 is_free=is_free,
                 store_links=links,
+                screenshots=shots,
+                metacritic=d.get('metacritic'),
+                metacritic_url=d.get('metacritic_url') or '',
                 **({'steam_app_id': steam_id} if steam_id else {}),
                 description=(d.get('description_raw') or '')[:2000],
                 release_date=parse_date(d.get('released')),

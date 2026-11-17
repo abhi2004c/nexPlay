@@ -7,6 +7,8 @@ from rest_framework.views import APIView
 from apps.reviews.analysis import analyze
 
 from .deals import deals_payload
+from .media import media_payload
+from .steam import steam_reviews_payload
 from .recommend import recommend_for, similar_titles
 
 from .models import Genre, Title
@@ -26,6 +28,7 @@ class TitleSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'slug', 'media_type', 'name', 'description', 'release_date', 'poster_url',
             'genres', 'creator', 'runtime_minutes', 'platforms', 'avg_rating', 'rating_count',
+            'metacritic', 'metacritic_url', 'steam_app_id',
         )
 
 
@@ -63,6 +66,14 @@ class TitleViewSet(viewsets.ReadOnlyModelViewSet):
         if title.media_type != 'game':
             return Response({'available': False})
         return Response(deals_payload(title))
+
+    @action(detail=True, methods=['get'])
+    def media(self, request, slug=None):
+        return Response(media_payload(self.get_object()))
+
+    @action(detail=True, methods=['get'], url_path='steam-reviews')
+    def steam_reviews(self, request, slug=None):
+        return Response(steam_reviews_payload(self.get_object()))
 
     @action(detail=True, methods=['get'])
     def similar(self, request, slug=None):
