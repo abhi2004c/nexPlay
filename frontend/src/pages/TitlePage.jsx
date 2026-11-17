@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth.jsx'
 import TitleCard from '../components/TitleCard.jsx'
+import Deals from '../components/Deals.jsx'
 
 export default function TitlePage() {
   const { slug } = useParams()
@@ -76,6 +77,8 @@ export default function TitlePage() {
           {msg && <p className="muted">{msg}</p>}
         </div>
       </div>
+
+      {t.media_type === 'game' && <Deals slug={slug} />}
 
       {analysis && (
         <section className="panel">

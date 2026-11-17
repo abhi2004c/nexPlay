@@ -8,9 +8,7 @@ Keys come from env: TMDB_API_KEY (v3 key or v4 read token) and RAWG_API_KEY.
 Safe to re-run: titles are matched on (media_type, external_id) and updated.
 """
 
-import json
 import os
-import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -19,28 +17,11 @@ from datetime import date
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.catalog.models import Genre, Title
+from apps.catalog.net import get_json
 
 TMDB_HOSTS = ['api.themoviedb.org', 'api.tmdb.org']
 TMDB_IMG = 'https://image.tmdb.org/t/p/w500'
 RAWG = 'https://api.rawg.io/api'
-
-
-def _open(req, context=None):
-    with urllib.request.urlopen(req, timeout=30, context=context) as resp:
-        return json.load(resp)
-
-
-def get_json(url, headers=None):
-    req = urllib.request.Request(url, headers={'User-Agent': 'NexPlay/1.0', **(headers or {})})
-    try:
-        return _open(req)
-    except urllib.error.URLError as e:
-        if not isinstance(e.reason, ssl.SSLError):
-            raise
-        # Some networks drop Python 3.14 / OpenSSL 3.5's TLS 1.3 handshake: retry on TLS 1.2.
-        ctx = ssl.create_default_context()
-        ctx.maximum_version = ssl.TLSVersion.TLSv1_2
-        return _open(req, ctx)
 
 
 def parse_date(s):

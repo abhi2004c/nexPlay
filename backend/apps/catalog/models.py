@@ -27,6 +27,8 @@ class Title(models.Model):
     runtime_minutes = models.PositiveIntegerField(null=True, blank=True)  # movies
     platforms = models.CharField(max_length=200, blank=True)  # games
     external_id = models.CharField(max_length=60, blank=True)  # TMDB / RAWG id
+    steam_app_id = models.CharField(max_length=20, blank=True)  # for player counts
+    cheapshark_id = models.CharField(max_length=30, blank=True)  # for prices
     avg_rating = models.FloatField(default=0)
     rating_count = models.PositiveIntegerField(default=0)
 

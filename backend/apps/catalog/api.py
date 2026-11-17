@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from apps.reviews.analysis import analyze
 
+from .deals import deals_payload
 from .recommend import recommend_for, similar_titles
 
 from .models import Genre, Title
@@ -53,6 +54,13 @@ class TitleViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['get'])
     def analysis(self, request, slug=None):
         return Response(analyze(self.get_object().reviews.all()))
+
+    @action(detail=True, methods=['get'])
+    def deals(self, request, slug=None):
+        title = self.get_object()
+        if title.media_type != 'game':
+            return Response({'available': False})
+        return Response(deals_payload(title))
 
     @action(detail=True, methods=['get'])
     def similar(self, request, slug=None):

@@ -53,3 +53,12 @@ form.inline input { flex: 1; margin: 0; }
 .sentbar .negative { background: #ff6b6b; }
 .foot { text-align: center; padding: 24px 16px 40px; font-size: 13px; }
 .foot a { text-decoration: underline; }
+.stats { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 16px; }
+.stats > div { display: flex; flex-direction: column; gap: 2px; }
+.stats strong { font-size: 22px; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; font-size: 13px; border-top: 0; }
+.small { font-size: 12px; }
+.panel a:not(.btn) { text-decoration: underline; }
