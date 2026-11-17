@@ -146,3 +146,5 @@ class Command(BaseCommand):
             media_type=media_type, external_id=external_id,
             defaults={'name': name[:200], **fields})
         title.genres.set([Genre.objects.get_or_create(name=g)[0] for g in genre_names])
+        year = fields['release_date'].year if fields.get('release_date') else '?'
+        self.stdout.write(f'  [{media_type}] {name} ({year})')
