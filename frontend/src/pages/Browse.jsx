@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth.jsx'
 import TitleCard from '../components/TitleCard.jsx'
 import Rail from '../components/Rail.jsx'
+import Hero from '../components/Hero.jsx'
 import ExternalSearch from '../components/ExternalSearch.jsx'
 
 const COPY = {
@@ -39,6 +40,7 @@ export default function Browse({ type }) {
   const [loading, setLoading] = useState(true)
   const [slow, setSlow] = useState(false)
   const [error, setError] = useState('')
+  const [showAllGenres, setShowAllGenres] = useState(false)
 
   useEffect(() => {
     document.title = `${search ? `“${search}”` : copy.title} — NexPlay`
@@ -89,6 +91,13 @@ export default function Browse({ type }) {
     try { localStorage.setItem(VIEW_KEY, v) } catch { /* not saved, still works */ }
   }
   const filtering = Boolean(genre || search)
+  const recList = recs?.results ?? []
+  const featured = type && !filtering ? recList.filter((t) => t.poster_url).slice(0, 5) : []
+  const railItems = recList.filter((t) => !featured.includes(t))
+  const SHOWN_GENRES = 8
+  const visibleGenres = showAllGenres
+    ? genres
+    : genres.filter((g, i) => i < SHOWN_GENRES || g.name === genre) // a chosen genre always stays visible
   const gridClass = `grid ${view === 'wide' ? 'wide' : ''}`
 
   return (
@@ -104,12 +113,15 @@ export default function Browse({ type }) {
         </div>
       </div>
 
-      {type && !filtering && recs?.results?.length > 0 && (
+      {type && !filtering && recs === undefined && <div className="hero hero-skeleton skeleton" aria-hidden="true" />}
+      <Hero titles={featured} />
+
+      {type && !filtering && railItems.length > 0 && (
         <Rail
           title={recs.personalized ? `Recommended ${copy.noun} for you` : `Discover ${copy.noun}`}
           hint={recs.personalized ? undefined : `Rate a few titles or add some to your watchlist to get ${copy.noun} picked for your taste.`}
         >
-          {recs.results.map((t) => <TitleCard key={t.id} t={t} />)}
+          {railItems.map((t) => <TitleCard key={t.id} t={t} />)}
         </Rail>
       )}
 
@@ -129,11 +141,16 @@ export default function Browse({ type }) {
         {genres.length > 0 && (
           <div className="pills" role="group" aria-label="Genre">
             <button className={genre === '' ? 'on' : ''} aria-pressed={genre === ''} onClick={() => change(setGenre)('')}>All genres</button>
-            {genres.map((g) => (
+            {visibleGenres.map((g) => (
               <button key={g.id} className={genre === g.name ? 'on' : ''} aria-pressed={genre === g.name} onClick={() => change(setGenre)(genre === g.name ? '' : g.name)}>
                 {g.name}
               </button>
             ))}
+            {genres.length > SHOWN_GENRES && (
+              <button className="more" onClick={() => setShowAllGenres(!showAllGenres)}>
+                {showAllGenres ? 'Fewer genres' : `More genres (${genres.length - SHOWN_GENRES})`}
+              </button>
+            )}
           </div>
         )}
       </div>
