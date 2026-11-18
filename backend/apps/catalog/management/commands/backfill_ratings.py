@@ -15,10 +15,15 @@ from apps.catalog.models import Title
 class Command(BaseCommand):
     help = 'Store TMDB (movies) and RAWG (games) ratings on existing titles'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--only', choices=['movies', 'games'], help='Only update one kind of title')
+
     def handle(self, *args, **o):
         try:
-            self.movies()
-            self.games()
+            if o['only'] != 'games':
+                self.movies()
+            if o['only'] != 'movies':
+                self.games()
         except importer.ImportFailure as e:
             raise CommandError(str(e))
         have = Title.objects.exclude(external_rating=None).count()

@@ -59,12 +59,15 @@ def rawg(path, **params):
     if not key:
         raise ImportFailure('Game search is not configured (RAWG_API_KEY is missing).')
     params['key'] = key
-    try:
-        return get_json(f'{RAWG}{path}?{urllib.parse.urlencode(params)}')
-    except urllib.error.HTTPError as e:
-        raise ImportFailure(f'RAWG returned an error ({e.code}).') from e
-    except urllib.error.URLError as e:
-        raise ImportFailure(f'Cannot reach RAWG ({e.reason}).') from e
+    url = f'{RAWG}{path}?{urllib.parse.urlencode(params)}'
+    for attempt in range(3):  # RAWG occasionally stalls: retry before giving up
+        try:
+            return get_json(url)
+        except urllib.error.HTTPError as e:
+            raise ImportFailure(f'RAWG returned an error ({e.code}).') from e
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            if attempt == 2:
+                raise ImportFailure(f'Cannot reach RAWG ({getattr(e, "reason", e)}).') from e
 
 
 # ---- lists (bulk) --------------------------------------------------------------
