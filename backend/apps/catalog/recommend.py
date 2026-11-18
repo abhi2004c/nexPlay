@@ -1,5 +1,6 @@
 """Genre-affinity recommendations and similar-title lookup."""
 
+import random
 from collections import defaultdict
 
 from django.db.models import Count
@@ -7,6 +8,7 @@ from django.db.models import Count
 from apps.community.models import WatchlistItem
 from apps.reviews.models import Review
 
+from .cache_utils import cached
 from .models import Title
 
 
@@ -45,14 +47,25 @@ def recommend_for(user, limit=10):
         for g in w.title.genres.all():
             weights[g.id] += 1  # mild interest signal
 
-    candidates = Title.objects.exclude(pk__in=seen).prefetch_related('genres')
-    if not weights:  # cold start: top rated
-        return list(candidates.order_by('-avg_rating', '-rating_count')[:limit]), False
+    if not weights:  # nothing to personalise on yet: show a fresh random selection
+        return discover(limit, exclude=seen), False
 
     scored = []
-    for t in candidates:
+    for t in Title.objects.exclude(pk__in=seen).prefetch_related('genres'):
         gs = list(t.genres.all())
         affinity = sum(weights.get(g.id, 0) for g in gs) / (len(gs) or 1)
         scored.append((affinity + t.avg_rating / 5, t))
     scored.sort(key=lambda x: -x[0])
-    return [t for _, t in scored[:limit]], True
+    # Pick from the best matches at random, so a refresh shows different (still relevant) titles.
+    best = [t for _, t in scored[:max(limit * 3, 24)]]
+    return random.sample(best, min(limit, len(best))), True
+
+
+def discover(limit=10, exclude=()):
+    """A random selection of titles that have artwork. Different on every call."""
+    pool = cached('discover_pool', 600,
+                  lambda: list(Title.objects.exclude(poster_url='').values_list('id', flat=True)))
+    ids = [i for i in pool if i not in set(exclude)]
+    picked = random.sample(ids, min(limit, len(ids)))
+    by_id = {t.id: t for t in Title.objects.filter(id__in=picked).prefetch_related('genres')}
+    return [by_id[i] for i in picked if i in by_id]

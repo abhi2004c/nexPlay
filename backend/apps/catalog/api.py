@@ -1,3 +1,5 @@
+from django.db.models import F
+from django.db.models.functions import Mod
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -10,7 +12,7 @@ from .cache_utils import cached
 from .deals import deals_payload
 from .media import media_payload
 from .steam import steam_reviews_payload
-from .recommend import recommend_for, similar_titles
+from .recommend import discover, recommend_for, similar_titles
 
 from .models import Genre, Title
 
@@ -54,10 +56,20 @@ class TitleViewSet(viewsets.ReadOnlyModelViewSet):
         ordering = p.get('ordering')
         if ordering in {'avg_rating', '-avg_rating', 'release_date', '-release_date', 'name'}:
             qs = qs.order_by(ordering)
+        elif ordering == 'random':
+            # A shuffle that is stable for one `seed` (so "Load more" continues the same order)
+            # but different for every new seed (so each refresh looks different). 10007 is prime,
+            # so for ids below it every multiplier gives a full permutation. Works on Postgres and SQLite.
+            try:
+                seed = int(p.get('seed', 0))
+            except ValueError:
+                seed = 0
+            qs = qs.annotate(shuffle=Mod(F('id') * (1 + seed % 10006) + (seed // 7) % 10007, 10007)).order_by('shuffle', 'id')
         return qs
 
     # Public data that is the same for every visitor: served from the server cache.
     def list(self, request, *args, **kwargs):
+        # the full URL (including a shuffle seed) is the cache key
         data = cached(f'titles:{request.get_full_path()}', 60,
                       lambda: dict(super(TitleViewSet, self).list(request, *args, **kwargs).data))
         return Response(data)
@@ -103,11 +115,8 @@ class RecommendationsView(APIView):
             titles, personalized = recommend_for(request.user)
             return Response({'personalized': personalized, 'results': TitleSerializer(titles, many=True).data})
 
-        def top_rated():  # same for every logged-out visitor
-            titles = Title.objects.prefetch_related('genres').order_by('-avg_rating', '-rating_count')[:10]
-            return {'personalized': False, 'results': TitleSerializer(titles, many=True).data}
-
-        return Response(cached('recs:anon', 300, top_rated))
+        # logged-out visitors: a fresh random selection on every refresh (never cached)
+        return Response({'personalized': False, 'results': TitleSerializer(discover(), many=True).data})
 
 
 class GenreViewSet(viewsets.ReadOnlyModelViewSet):

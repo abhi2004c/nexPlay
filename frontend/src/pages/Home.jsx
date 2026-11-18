@@ -7,7 +7,8 @@ import ExternalSearch from '../components/ExternalSearch.jsx'
 export default function Home() {
   const [type, setType] = useState('')
   const [search, setSearch] = useState('')
-  const [ordering, setOrdering] = useState('-release_date')
+  const [ordering, setOrdering] = useState('random') // shuffled by default: different on every visit
+  const [seed] = useState(() => Math.floor(Math.random() * 1_000_000)) // new per page load, fixed while paging
   const [titles, setTitles] = useState([])
   const [error, setError] = useState('')
   const [recs, setRecs] = useState(null)
@@ -23,6 +24,7 @@ export default function Home() {
 
   useEffect(() => {
     const q = new URLSearchParams({ ordering, page })
+    if (ordering === 'random') q.set('seed', seed)
     if (type) q.set('media_type', type)
     if (search) q.set('search', search)
     // wait for the user to stop typing, but don't delay plain clicks and the first load
@@ -38,7 +40,7 @@ export default function Home() {
         .finally(() => setLoading(false))
     }, search ? 250 : 0)
     return () => clearTimeout(id)
-  }, [type, search, ordering, page])
+  }, [type, search, ordering, page, seed])
 
   // the free server sleeps when idle: after a few seconds of waiting, say so
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function Home() {
     <>
       {recs?.results?.length > 0 && (
         <section className="rail">
-          <h2>{recs.personalized ? 'Recommended for you' : 'Top rated'}</h2>
+          <h2>{recs.personalized ? 'Recommended for you' : 'Discover something new'}</h2>
           {!recs.personalized && (
             <p className="muted">Rate a few titles or add some to your watchlist to get personalized picks.</p>
           )}
@@ -67,6 +69,7 @@ export default function Home() {
         ))}
         <input placeholder="Search titles…" value={search} onChange={(e) => change(setSearch)(e.target.value)} />
         <select value={ordering} onChange={(e) => change(setOrdering)(e.target.value)}>
+          <option value="random">Shuffled</option>
           <option value="-release_date">Newest</option>
           <option value="-avg_rating">Top rated</option>
           <option value="name">A–Z</option>
