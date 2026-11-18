@@ -60,10 +60,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Online PostgreSQL (Neon / Supabase / Render / Railway ...) via DATABASE_URL.
+# Keeping a connection open between requests saves a slow reconnect to the remote database, which is
+# right for production (one gunicorn process = one connection). The local dev server is multi-threaded
+# and would keep one open connection PER THREAD, quickly exhausting Supabase's pool (session mode
+# allows only 15 clients), so locally connections are closed after each request.
+# Override with DB_CONN_MAX_AGE (seconds) if needed.
 DATABASES = {
     'default': dj_database_url.config(
         env='DATABASE_URL',
-        conn_max_age=600,
+        conn_max_age=int(os.environ.get('DB_CONN_MAX_AGE', '0' if DEBUG else '600')),
+        conn_health_checks=True,  # drop a connection the server has closed instead of failing the request
         ssl_require=os.environ.get('DB_SSL_REQUIRE', 'True') == 'True',
     )
 }

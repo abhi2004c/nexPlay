@@ -34,8 +34,11 @@ def similar_titles(title, limit=6):
     return [t for _, t in scored[:limit]]
 
 
-def recommend_for(user, limit=14):
-    """Build a genre profile from the user's ratings (rating - 5 as weight) and watchlist."""
+def recommend_for(user, limit=14, media_type=''):
+    """Build a genre profile from the user's ratings (rating - 5 as weight) and watchlist.
+
+    media_type 'movie' or 'game' limits the picks to that kind (the taste profile uses everything).
+    """
     weights = defaultdict(float)
     seen = set()
     for r in Review.objects.filter(user=user).prefetch_related('title__genres'):
@@ -48,10 +51,13 @@ def recommend_for(user, limit=14):
             weights[g.id] += 1  # mild interest signal
 
     if not weights:  # nothing to personalise on yet: show a fresh random selection
-        return discover(limit, exclude=seen), False
+        return discover(limit, exclude=seen, media_type=media_type), False
 
+    candidates = Title.objects.exclude(pk__in=seen)
+    if media_type:
+        candidates = candidates.filter(media_type=media_type)
     scored = []
-    for t in Title.objects.exclude(pk__in=seen).prefetch_related('genres'):
+    for t in candidates.prefetch_related('genres'):
         gs = list(t.genres.all())
         affinity = sum(weights.get(g.id, 0) for g in gs) / (len(gs) or 1)
         scored.append((affinity + t.avg_rating / 5, t))
@@ -61,11 +67,17 @@ def recommend_for(user, limit=14):
     return random.sample(best, min(limit, len(best))), True
 
 
-def discover(limit=14, exclude=()):
-    """A random selection of titles that have artwork. Different on every call."""
-    pool = cached('discover_pool', 600,
-                  lambda: list(Title.objects.exclude(poster_url='').values_list('id', flat=True)))
-    ids = [i for i in pool if i not in set(exclude)]
+def discover(limit=14, exclude=(), media_type=''):
+    """A random selection of titles that have artwork (optionally only movies or only games)."""
+    def pool_ids():
+        qs = Title.objects.exclude(poster_url='')
+        if media_type:
+            qs = qs.filter(media_type=media_type)
+        return list(qs.values_list('id', flat=True))
+
+    pool = cached(f'discover_pool:{media_type}', 600, pool_ids)
+    skip = set(exclude)
+    ids = [i for i in pool if i not in skip]
     picked = random.sample(ids, min(limit, len(ids)))
     by_id = {t.id: t for t in Title.objects.filter(id__in=picked).prefetch_related('genres')}
     return [by_id[i] for i in picked if i in by_id]

@@ -122,12 +122,15 @@ class RecommendationsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        """GET /api/recommendations/?media_type=movie|game  (omit it for a mix of both)"""
+        mt = request.query_params.get('media_type')
+        mt = mt if mt in ('movie', 'game') else ''
         if request.user.is_authenticated:
-            titles, personalized = recommend_for(request.user)
+            titles, personalized = recommend_for(request.user, media_type=mt)
             return Response({'personalized': personalized, 'results': TitleSerializer(titles, many=True).data})
 
         # logged-out visitors: a fresh random selection on every refresh (never cached)
-        return Response({'personalized': False, 'results': TitleSerializer(discover(), many=True).data})
+        return Response({'personalized': False, 'results': TitleSerializer(discover(media_type=mt), many=True).data})
 
 
 class GenreViewSet(viewsets.ReadOnlyModelViewSet):

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import './theme.css'
 import './pages-theme.css'
+import './search-theme.css'
 import App from './App.jsx'
 import { AuthProvider } from './auth.jsx'
 

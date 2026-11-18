@@ -2,6 +2,7 @@ import { Link, NavLink, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth.jsx'
 import Home from './pages/Home.jsx'
 import Browse from './pages/Browse.jsx'
+import HeaderSearch from './components/HeaderSearch.jsx'
 import TitlePage from './pages/TitlePage.jsx'
 import AuthPage from './pages/AuthPage.jsx'
 import Watchlist from './pages/Watchlist.jsx'
@@ -18,6 +19,7 @@ export default function App() {
           <NavLink to="/games">Games</NavLink>
           <NavLink to="/watchlist">Watchlist</NavLink>
         </nav>
+        <HeaderSearch />
         <div className="grow" />
         {user ? (
           <>
@@ -33,6 +35,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/movies" element={<Browse key="movie" type="movie" />} />
           <Route path="/games" element={<Browse key="game" type="game" />} />
+          <Route path="/search" element={<Browse key="all" type="" />} />
           <Route path="/title/:slug" element={<TitlePage />} />
           <Route path="/login" element={<AuthPage />} />
           <Route path="/watchlist" element={<Watchlist />} />
