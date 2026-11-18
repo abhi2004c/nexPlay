@@ -21,7 +21,8 @@ class Title(models.Model):
     slug = models.SlugField(max_length=220, unique=True, blank=True)
     description = models.TextField(blank=True)
     release_date = models.DateField(null=True, blank=True)
-    poster_url = models.URLField(blank=True)
+    poster_url = models.URLField(blank=True)  # portrait: movie poster / Steam box-art
+    backdrop_url = models.URLField(blank=True)  # landscape 16:9: TMDB backdrop / RAWG screenshot
     genres = models.ManyToManyField(Genre, related_name='titles', blank=True)
     creator = models.CharField(max_length=150, blank=True)  # director / developer
     runtime_minutes = models.PositiveIntegerField(null=True, blank=True)  # movies

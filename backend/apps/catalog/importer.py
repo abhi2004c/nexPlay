@@ -133,6 +133,21 @@ def _game_links(rawg_id):
     return links, steam_id
 
 
+STEAM_COVER = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg'
+TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w780'
+
+
+def steam_cover(app_id):
+    """Portrait box-art for a Steam game, or '' if Steam has none (a few older games)."""
+    url = STEAM_COVER.format(app_id)
+    try:
+        req = urllib.request.Request(url, method='HEAD', headers={'User-Agent': 'NexPlay/1.0'})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return url if r.status == 200 else ''
+    except Exception:
+        return ''
+
+
 def _save(name, media_type, external_id, fields, genre_names):
     title, _ = Title.objects.update_or_create(
         media_type=media_type, external_id=external_id,
@@ -148,6 +163,7 @@ def import_movie(tmdb_id):
         description=d.get('overview') or '',
         release_date=parse_date(d.get('release_date')),
         poster_url=f"{TMDB_IMG}{d['poster_path']}" if d.get('poster_path') else '',
+        backdrop_url=f"{TMDB_BACKDROP}{d['backdrop_path']}" if d.get('backdrop_path') else '',
         creator=director,
         runtime_minutes=d.get('runtime') or None,
         external_rating=round(d['vote_average'], 1) if d.get('vote_count') else None,
@@ -178,7 +194,9 @@ def import_game(rawg_id):
         **({'steam_app_id': steam_id} if steam_id else {}),
         description=(d.get('description_raw') or '')[:2000],
         release_date=parse_date(d.get('released')),
-        poster_url=d.get('background_image') or '',
+        # portrait box-art from Steam when it exists; RAWG's landscape image is kept as the backdrop
+        poster_url=(steam_cover(steam_id) if steam_id else '') or d.get('background_image') or '',
+        backdrop_url=d.get('background_image') or '',
         creator=', '.join(x['name'] for x in d.get('developers', [])[:2]),
         platforms=', '.join(p['platform']['name'] for p in d.get('platforms', []) or [])[:200],
     ), [g['name'] for g in d.get('genres', [])])

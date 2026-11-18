@@ -17,14 +17,16 @@ function mainBadge(t) {
   return null
 }
 
-export default function TitleCard({ t }) {
+// `wide` shows the landscape (16:9) image instead of the portrait poster/box-art.
+export default function TitleCard({ t, wide = false }) {
   const year = t.release_date?.slice(0, 4)
   const badge = mainBadge(t)
+  const image = wide ? t.backdrop_url || t.poster_url : t.poster_url
   return (
     <div className="card">
       <Link to={`/title/${t.slug}`} className="cardlink">
         <div className={`poster ${t.media_type}`}>
-          {t.poster_url ? <img src={t.poster_url} alt="" loading="lazy" /> : <span>{t.name[0]}</span>}
+          {image ? <img src={image} alt="" loading="lazy" /> : <span>{t.name[0]}</span>}
           {badge && (
             <span className={`pbadge ${badge.tone}`} title={`${badge.label} ${badge.value}`}>
               <b>{badge.value}</b><small>{badge.label}</small>

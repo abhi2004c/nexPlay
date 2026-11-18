@@ -1,0 +1,20 @@
+/* Movies / Games pages, landscape cards, "see all" links */
+.pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.pagehead h1 { margin: 0; font-size: clamp(28px, 4vw, 42px); font-weight: 800; letter-spacing: -.03em; }
+.pagehead p { margin: 4px 0 0; }
+
+.grid.wide { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.grid.wide .poster { aspect-ratio: 16 / 9; }
+.grid.wide .card.skeleton { min-height: 220px; aspect-ratio: auto; }
+
+.railbtns { align-items: center; }
+.seeall { margin-right: 6px; padding: 7px 14px; border-radius: 99px; font-size: 13.5px; font-weight: 600; color: #c7b8ff; background: rgba(124, 92, 255, .14); border: 1px solid rgba(124, 92, 255, .3); transition: background .15s, color .15s; }
+.seeall:hover { background: var(--accent); color: #fff; }
+.skeleton-line { display: block; width: 140px; height: 24px; border-radius: 8px; }
+.filterrow .segmented { margin-left: auto; }
+
+@media (max-width: 600px) {
+  .grid.wide { grid-template-columns: 1fr; }
+  .filterrow .segmented { margin-left: 0; }
+  .seeall { padding: 6px 12px; }
+}

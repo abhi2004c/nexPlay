@@ -34,7 +34,7 @@ export default function Hero({ titles }) {
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className="hero-bg" style={{ backgroundImage: `url(${t.poster_url})` }} key={`bg-${t.id}`} />
+      <div className="hero-bg" style={{ backgroundImage: `url(${t.backdrop_url || t.poster_url})` }} key={`bg-${t.id}`} />
       <div className="hero-shade" />
       <div className="hero-body" key={t.id}>
         <div className="hero-text">
@@ -51,7 +51,7 @@ export default function Hero({ titles }) {
           </div>
         </div>
         {t.poster_url && (
-          <Link to={`/title/${t.slug}`} className={`hero-art ${t.media_type}`} tabIndex={-1} aria-hidden="true">
+          <Link to={`/title/${t.slug}`} className="hero-art movie" tabIndex={-1} aria-hidden="true">
             <img src={t.poster_url} alt="" />
           </Link>
         )}

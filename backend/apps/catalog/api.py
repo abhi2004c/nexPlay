@@ -1,4 +1,4 @@
-from django.db.models import Count, F
+from django.db.models import Count, F, Q
 from django.db.models.functions import Mod
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
@@ -32,7 +32,7 @@ class TitleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Title
         fields = (
-            'id', 'slug', 'media_type', 'name', 'description', 'release_date', 'poster_url',
+            'id', 'slug', 'media_type', 'name', 'description', 'release_date', 'poster_url', 'backdrop_url',
             'genres', 'creator', 'runtime_minutes', 'platforms', 'avg_rating', 'rating_count',
             'metacritic', 'metacritic_url', 'steam_app_id', 'external_rating', 'external_votes',
         )
@@ -133,10 +133,19 @@ class RecommendationsView(APIView):
 class GenreViewSet(viewsets.ReadOnlyModelViewSet):
     """Genres with how many titles each has, most popular first (used for the home page filter pills)."""
 
-    queryset = Genre.objects.annotate(count=Count('titles')).filter(count__gt=0).order_by('-count', 'name')
     serializer_class = GenreSerializer
     permission_classes = [AllowAny]
     pagination_class = None
 
+    def _media_type(self):
+        mt = self.request.query_params.get('media_type')
+        return mt if mt in ('movie', 'game') else ''
+
+    def get_queryset(self):
+        mt = self._media_type()  # ?media_type=movie counts only that kind of title
+        count = Count('titles', filter=Q(titles__media_type=mt)) if mt else Count('titles')
+        return Genre.objects.annotate(count=count).filter(count__gt=0).order_by('-count', 'name')
+
     def list(self, request, *args, **kwargs):
-        return Response(cached('genres', 600, lambda: super(GenreViewSet, self).list(request, *args, **kwargs).data))
+        return Response(cached(f'genres:{self._media_type()}', 600,
+                               lambda: super(GenreViewSet, self).list(request, *args, **kwargs).data))
