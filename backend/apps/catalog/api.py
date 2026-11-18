@@ -32,7 +32,7 @@ class TitleSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'slug', 'media_type', 'name', 'description', 'release_date', 'poster_url',
             'genres', 'creator', 'runtime_minutes', 'platforms', 'avg_rating', 'rating_count',
-            'metacritic', 'metacritic_url', 'steam_app_id',
+            'metacritic', 'metacritic_url', 'steam_app_id', 'external_rating', 'external_votes',
         )
 
 

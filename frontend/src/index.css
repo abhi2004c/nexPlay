@@ -113,3 +113,6 @@ a.rating:hover { border-color: var(--accent); }
 .srctag { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: .03em; padding: 1px 7px; border-radius: 5px; margin-right: 8px; vertical-align: 1px; color: #0e1015; }
 .srctag.imdb { background: #f5c518; } .srctag.tmdb { background: #01b4e4; } .srctag.nex { background: var(--accent); color: #fff; }
 a.srctag:hover { filter: brightness(1.1); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.chip { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 5px; color: #0e1015; }
+.chip.tmdb { background: #01b4e4; } .chip.mc { background: #66cc33; } .chip.rawg { background: #ff8a4c; } .chip.nex { background: var(--accent); color: #fff; }

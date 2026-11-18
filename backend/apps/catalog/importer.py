@@ -142,6 +142,8 @@ def import_movie(tmdb_id):
         poster_url=f"{TMDB_IMG}{d['poster_path']}" if d.get('poster_path') else '',
         creator=director,
         runtime_minutes=d.get('runtime') or None,
+        external_rating=round(d['vote_average'], 1) if d.get('vote_count') else None,
+        external_votes=d.get('vote_count') or 0,
     ), [g['name'] for g in d.get('genres', [])])
 
 
@@ -156,6 +158,8 @@ def import_game(rawg_id):
         screenshots=shots,
         metacritic=d.get('metacritic'),
         metacritic_url=d.get('metacritic_url') or '',
+        external_rating=round(d['rating'] * 2, 1) if d.get('ratings_count') else None,  # RAWG is out of 5
+        external_votes=d.get('ratings_count') or 0,
         **({'steam_app_id': steam_id} if steam_id else {}),
         description=(d.get('description_raw') or '')[:2000],
         release_date=parse_date(d.get('released')),
