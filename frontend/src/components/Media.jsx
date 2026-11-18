@@ -52,12 +52,18 @@ function Trailer({ t, steamUrl }) {
   )
 }
 
+const TRAILERS_FIRST = 4
+const SHOTS_FIRST = 12
+
 export default function Media({ slug }) {
   const [m, setM] = useState(null)
   const [open, setOpen] = useState(null) // screenshot index in lightbox
+  const [allTrailers, setAllTrailers] = useState(false)
+  const [allShots, setAllShots] = useState(false)
 
   useEffect(() => {
     setM(null)
+    setOpen(null); setAllTrailers(false); setAllShots(false)
     api(`/titles/${slug}/media/`).then(setM).catch(() => setM({ trailers: [], screenshots: [] }))
   }, [slug])
 
@@ -74,27 +80,51 @@ export default function Media({ slug }) {
 
   if (!m || (m.trailers.length === 0 && m.screenshots.length === 0)) return null
 
+  const shownTrailers = allTrailers ? m.trailers : m.trailers.slice(0, TRAILERS_FIRST)
+  const shownShots = allShots ? m.screenshots : m.screenshots.slice(0, SHOTS_FIRST)
+  const step = (d) => setOpen((i) => (i + d + m.screenshots.length) % m.screenshots.length)
+
   return (
     <section className="panel">
-      <h2>Trailers &amp; screenshots</h2>
       {m.trailers.length > 0 && (
-        <div className="trailers">
-          {m.trailers.map((t) => <Trailer key={t.hls || t.name} t={t} steamUrl={m.steam_url} />)}
-        </div>
+        <>
+          <h2>Trailers <span className="muted count">{m.trailers.length}</span></h2>
+          <div className="trailers">
+            {shownTrailers.map((t) => <Trailer key={t.hls || t.name} t={t} steamUrl={m.steam_url} />)}
+          </div>
+          {m.trailers.length > TRAILERS_FIRST && (
+            <p><button className="ghost" onClick={() => setAllTrailers(!allTrailers)}>
+              {allTrailers ? 'Show fewer trailers' : `Show all ${m.trailers.length} trailers`}
+            </button></p>
+          )}
+        </>
       )}
       {m.screenshots.length > 0 && (
-        <div className="shots">
-          {m.screenshots.map((s, i) => (
-            <button key={s} onClick={() => setOpen(i)} aria-label={`Screenshot ${i + 1}`}>
-              <img src={s} alt="" loading="lazy" />
-            </button>
-          ))}
-        </div>
+        <>
+          <h2>Screenshots <span className="muted count">{m.screenshots.length}</span></h2>
+          <div className="shots">
+            {shownShots.map((s, i) => (
+              <button key={s.full} onClick={() => setOpen(i)} aria-label={`Open screenshot ${i + 1} of ${m.screenshots.length}`}>
+                <img src={s.thumb} alt="" loading="lazy" />
+              </button>
+            ))}
+          </div>
+          {m.screenshots.length > SHOTS_FIRST && (
+            <p><button className="ghost" onClick={() => setAllShots(!allShots)}>
+              {allShots ? 'Show fewer screenshots' : `Show all ${m.screenshots.length} screenshots`}
+            </button></p>
+          )}
+        </>
+      )}
+      {m.source === 'steam' && m.steam_url && (
+        <p className="muted small">Media from the game’s <a href={m.steam_url} target="_blank" rel="noreferrer">Steam store page</a>.</p>
       )}
       {open !== null && (
-        <div className="lightbox" onClick={() => setOpen(null)}>
-          <img src={m.screenshots[open]} alt="" onClick={(e) => e.stopPropagation()} />
-          <span className="muted">{open + 1} / {m.screenshots.length} · ← → to browse · Esc to close</span>
+        <div className="lightbox" onClick={() => setOpen(null)} role="dialog" aria-label="Screenshot viewer">
+          <button className="lbnav prev" aria-label="Previous screenshot" onClick={(e) => { e.stopPropagation(); step(-1) }}>‹</button>
+          <img src={m.screenshots[open].full} alt="" onClick={(e) => e.stopPropagation()} />
+          <button className="lbnav next" aria-label="Next screenshot" onClick={(e) => { e.stopPropagation(); step(1) }}>›</button>
+          <span className="muted lbcount">{open + 1} / {m.screenshots.length} · ← → to browse · Esc to close</span>
         </div>
       )}
     </section>

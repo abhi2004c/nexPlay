@@ -10,6 +10,7 @@ import SteamReviews from '../components/SteamReviews.jsx'
 import SteamIcon from '../components/SteamIcon.jsx'
 import WatchProviders from '../components/WatchProviders.jsx'
 import { steamLabel, steamTone } from '../steam.js'
+import { cleanDescription } from '../text.js'
 import Reviews from '../components/Reviews.jsx'
 
 export default function TitlePage() {
@@ -80,7 +81,7 @@ export default function TitlePage() {
             {t.platforms ? ` · ${t.platforms}` : ''}
           </p>
           <p>{t.genres.map((g) => <span className="tag" key={g}>{g}</span>)}</p>
-          <p>{t.description}</p>
+          <p style={{ whiteSpace: 'pre-line' }}>{cleanDescription(t.description)}</p>
           {t.media_type === 'movie' && info?.imdb?.score != null && (
             <p className="score">
               <a className="srctag imdb" href={info.imdb.url} target="_blank" rel="noreferrer">IMDb</a>

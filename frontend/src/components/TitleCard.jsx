@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import RatingChips from './RatingChips.jsx'
 import WatchButton from './WatchButton.jsx'
+import { cleanDescription } from '../text.js'
 
 export default function TitleCard({ t }) {
   const year = t.release_date?.slice(0, 4)
@@ -10,7 +11,7 @@ export default function TitleCard({ t }) {
         <div className={`poster ${t.media_type}`}>
           {t.poster_url ? <img src={t.poster_url} alt="" loading="lazy" /> : <span>{t.name[0]}</span>}
           <div className="overlay" aria-hidden="true">
-            <p className="ov-desc">{t.description || 'No description yet.'}</p>
+            <p className="ov-desc">{cleanDescription(t.description, { multiline: false }) || 'No description yet.'}</p>
             <div className="ov-tags">{t.genres.slice(0, 3).map((g) => <span key={g}>{g}</span>)}</div>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import RatingChips from './RatingChips.jsx'
 import WatchButton from './WatchButton.jsx'
+import { cleanDescription } from '../text.js'
 
 const SLIDE_MS = 7000
 
@@ -43,7 +44,7 @@ export default function Hero({ titles }) {
             {year}{t.genres.length > 0 && ` · ${t.genres.slice(0, 3).join(' · ')}`}
           </p>
           <RatingChips t={t} empty={false} />
-          <p className="hero-desc">{t.description}</p>
+          <p className="hero-desc">{cleanDescription(t.description, { multiline: false })}</p>
           <div className="actions">
             <Link className="btn" to={`/title/${t.slug}`}>View details</Link>
             <WatchButton slug={t.slug} name={t.name} variant="full" />
