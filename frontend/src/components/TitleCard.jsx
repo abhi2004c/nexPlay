@@ -18,7 +18,7 @@ function mainBadge(t) {
 }
 
 // `wide` shows the landscape (16:9) image instead of the portrait poster/box-art.
-export default function TitleCard({ t, wide = false }) {
+export default function TitleCard({ t, wide = false, hideWatch = false, children }) {
   const year = t.release_date?.slice(0, 4)
   const badge = mainBadge(t)
   const image = wide ? t.backdrop_url || t.poster_url : t.poster_url
@@ -45,7 +45,8 @@ export default function TitleCard({ t, wide = false }) {
           </div>
         </div>
       </Link>
-      <WatchButton slug={t.slug} name={t.name} />
+      {!hideWatch && <WatchButton slug={t.slug} name={t.name} />}
+      {children}
     </div>
   )
 }

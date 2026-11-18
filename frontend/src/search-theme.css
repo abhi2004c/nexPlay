@@ -16,3 +16,8 @@
   .bar { flex-wrap: wrap; row-gap: 10px; }
   .hsearch { order: 10; flex: 1 1 100%; max-width: none; margin: 0; }
 }
+
+/* watchlist tiles */
+.wl-controls { display: flex; gap: 6px; margin-top: 8px; }
+.wl-controls select { flex: 1; min-width: 0; font-size: 13px; padding: 7px 8px; }
+.wl-controls .ghost { padding: 7px 10px; font-size: 13px; }

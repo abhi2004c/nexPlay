@@ -2,6 +2,7 @@ from django.db.models import Count
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.response import Response
 
+from apps.catalog.api import TitleSerializer
 from apps.catalog.models import Title
 
 from .models import Comment, Thread, WatchlistItem
@@ -12,10 +13,11 @@ class WatchlistSerializer(serializers.ModelSerializer):
         source='title', slug_field='slug', queryset=Title.objects.all()
     )
     title_name = serializers.CharField(source='title.name', read_only=True)
+    title = TitleSerializer(read_only=True)  # full card data so the watchlist can show tiles
 
     class Meta:
         model = WatchlistItem
-        fields = ('id', 'title_slug', 'title_name', 'status', 'added_at')
+        fields = ('id', 'title_slug', 'title_name', 'title', 'status', 'added_at')
 
 
 class WatchlistViewSet(viewsets.ModelViewSet):
@@ -25,7 +27,7 @@ class WatchlistViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return WatchlistItem.objects.filter(user=self.request.user).select_related('title')
+        return WatchlistItem.objects.filter(user=self.request.user).select_related('title').prefetch_related('title__genres')
 
     def create(self, request, *args, **kwargs):
         """Adding a title that is already on the list is not an error: return the existing entry."""
