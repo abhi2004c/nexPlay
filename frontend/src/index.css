@@ -212,3 +212,15 @@ main { max-width: 1200px; }
   .hero-body { padding-top: 28px; }
   .filterrow input[type='search'] { min-width: 0; width: 100%; flex-basis: 100%; }
 }
+
+/* where to watch */
+.watchhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.watchhead h2 { margin: 0; }
+.countrypick { display: flex; align-items: center; gap: 8px; }
+.countrypick select { max-width: 220px; }
+.provgroup h3, .elsewhere h3 { margin: 16px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.provlist { display: flex; flex-wrap: wrap; gap: 10px; }
+.prov { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 14px; }
+.prov img, .prov b { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; display: grid; place-items: center; background: var(--line); }
+.notice { margin: 10px 0; padding: 10px 14px; border-radius: 10px; background: rgba(255, 200, 87, .1); border: 1px solid rgba(255, 200, 87, .35); }
+.elsewhere { margin-top: 8px; }

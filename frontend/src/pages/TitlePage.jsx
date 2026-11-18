@@ -8,6 +8,7 @@ import Media from '../components/Media.jsx'
 import MovieTrailer, { TmdbReviews } from '../components/MovieInfo.jsx'
 import SteamReviews from '../components/SteamReviews.jsx'
 import SteamIcon from '../components/SteamIcon.jsx'
+import WatchProviders from '../components/WatchProviders.jsx'
 import { steamLabel, steamTone } from '../steam.js'
 import Reviews from '../components/Reviews.jsx'
 
@@ -133,6 +134,7 @@ export default function TitlePage() {
       </div>
 
       {t.media_type === 'movie' && <MovieTrailer info={info} />}
+      {t.media_type === 'movie' && <WatchProviders slug={slug} />}
       {t.media_type === 'game' && <Media slug={slug} />}
       {t.media_type === 'game' && <Deals slug={slug} />}
       {t.media_type === 'game' && t.steam_app_id && <SteamReviews slug={slug} />}

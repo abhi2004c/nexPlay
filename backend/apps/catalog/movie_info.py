@@ -81,6 +81,49 @@ def build(title):
     }
 
 
+WATCH_TTL = 12 * 60 * 60
+LOGO = 'https://image.tmdb.org/t/p/w92'
+
+
+def watch_payload(title):
+    """Where a movie can be watched, per country (TMDB, data provided by JustWatch).
+
+    {'countries': {'IN': {'link': ..., 'stream': [{'name','logo'}], 'free': [...], 'rent': [...], 'buy': [...]}}}
+    A country is missing when TMDB has no availability data for it.
+    """
+    if title.media_type != 'movie' or not title.external_id:
+        return {'available': False}
+    key = f'watch:{title.external_id}'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    try:
+        raw = importer.tmdb(f'/movie/{title.external_id}/watch/providers').get('results', {})
+    except Exception as e:  # TMDB unreachable: the page still works without this section
+        payload = {'available': True, 'countries': {}, 'error': f'Availability unavailable ({type(e).__name__})'}
+        cache.set(key, payload, 120)
+        return payload
+
+    def providers(items):
+        return [{'name': p['provider_name'], 'logo': f"{LOGO}{p['logo_path']}" if p.get('logo_path') else ''}
+                for p in items or []]
+
+    countries = {}
+    for code, c in raw.items():
+        entry = {
+            'link': c.get('link'),
+            'stream': providers(c.get('flatrate')),
+            'free': providers((c.get('free') or []) + (c.get('ads') or [])),
+            'rent': providers(c.get('rent')),
+            'buy': providers(c.get('buy')),
+        }
+        if any(entry[k] for k in ('stream', 'free', 'rent', 'buy')):
+            countries[code] = entry
+    payload = {'available': True, 'error': None, 'countries': countries}
+    cache.set(key, payload, WATCH_TTL)
+    return payload
+
+
 def movie_info_payload(title):
     empty = {'trailer': None, 'tmdb': None, 'imdb': None, 'imdb_url': None, 'reviews': []}
     if title.media_type != 'movie' or not title.external_id:
