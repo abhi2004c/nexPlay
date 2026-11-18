@@ -6,6 +6,7 @@ Keys come from env: TMDB_API_KEY (v3 key or v4 read token) and RAWG_API_KEY.
 
 import os
 import re
+import time
 import urllib.error
 import urllib.parse
 from datetime import date
@@ -64,10 +65,13 @@ def rawg(path, **params):
         try:
             return get_json(url)
         except urllib.error.HTTPError as e:
-            raise ImportFailure(f'RAWG returned an error ({e.code}).') from e
+            if e.code < 500 or attempt == 2:  # 5xx is RAWG's own hiccup: worth another try
+                raise ImportFailure(f'RAWG returned an error ({e.code}).') from e
+            time.sleep(2 * (attempt + 1))
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             if attempt == 2:
                 raise ImportFailure(f'Cannot reach RAWG ({getattr(e, "reason", e)}).') from e
+            time.sleep(2 * (attempt + 1))
 
 
 # ---- lists (bulk) --------------------------------------------------------------
