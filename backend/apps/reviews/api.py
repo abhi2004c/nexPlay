@@ -5,6 +5,7 @@ from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.catalog.cache_utils import invalidate_title
 from apps.catalog.models import Title
 
 from .analysis import sentiment_score
@@ -72,6 +73,7 @@ def refresh_title_rating(title):
     title.avg_rating = round(agg['avg'] or 0, 2)
     title.rating_count = agg['n']
     title.save(update_fields=['avg_rating', 'rating_count'])
+    invalidate_title(title.slug)  # drop the cached detail/analysis so the new rating shows immediately
 
 
 ORDERINGS = {

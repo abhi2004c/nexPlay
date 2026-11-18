@@ -1,3 +1,4 @@
+from django.db.models import Count
 from rest_framework import permissions, serializers, viewsets
 
 from apps.catalog.models import Title
@@ -39,11 +40,15 @@ class ThreadSerializer(serializers.ModelSerializer):
     title_slug = serializers.SlugRelatedField(
         source='title', slug_field='slug', queryset=Title.objects.all(), required=False, allow_null=True
     )
-    comment_count = serializers.IntegerField(source='comments.count', read_only=True)
+    comment_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Thread
         fields = ('id', 'author', 'title_slug', 'subject', 'body', 'comment_count', 'created_at')
+
+    def get_comment_count(self, obj):  # annotated by the viewset; one query for the whole list
+        n = getattr(obj, 'comment_total', None)
+        return n if n is not None else obj.comments.count()
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -61,7 +66,7 @@ class ThreadViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
 
     def get_queryset(self):
-        qs = Thread.objects.select_related('author', 'title')
+        qs = Thread.objects.select_related('author', 'title').annotate(comment_total=Count('comments'))
         if self.request.query_params.get('title'):
             qs = qs.filter(title__slug=self.request.query_params['title'])
         return qs

@@ -13,6 +13,8 @@ export default function Home() {
   const [recs, setRecs] = useState(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [slow, setSlow] = useState(false)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -23,7 +25,9 @@ export default function Home() {
     const q = new URLSearchParams({ ordering, page })
     if (type) q.set('media_type', type)
     if (search) q.set('search', search)
+    // wait for the user to stop typing, but don't delay plain clicks and the first load
     const id = setTimeout(() => {
+      setLoading(true)
       api(`/titles/?${q}`)
         .then((d) => {
           setTitles((prev) => (page === 1 ? d.results : [...prev, ...d.results]))
@@ -31,9 +35,17 @@ export default function Home() {
           setError('')
         })
         .catch((e) => setError(e.message))
-    }, 250)
+        .finally(() => setLoading(false))
+    }, search ? 250 : 0)
     return () => clearTimeout(id)
   }, [type, search, ordering, page])
+
+  // the free server sleeps when idle: after a few seconds of waiting, say so
+  useEffect(() => {
+    if (!loading) { setSlow(false); return }
+    const id = setTimeout(() => setSlow(true), 4000)
+    return () => clearTimeout(id)
+  }, [loading])
 
   const change = (setter) => (value) => { setter(value); setPage(1) }
 
@@ -61,8 +73,18 @@ export default function Home() {
         </select>
       </div>
       {error && <p className="error">Could not reach the API: {error}</p>}
+      {loading && titles.length === 0 && !error && (
+        <>
+          {slow && (
+            <p className="muted">
+              Waking up the server — it sleeps when nobody has visited for a while, so the first load can take up to a minute.
+            </p>
+          )}
+          <div className="grid">{[...Array(8)].map((_, i) => <div key={i} className="card skeleton" />)}</div>
+        </>
+      )}
       <div className="grid">{titles.map((t) => <TitleCard key={t.id} t={t} />)}</div>
-      {!error && titles.length === 0 && <p className="muted">Nothing found.</p>}
+      {!loading && !error && titles.length === 0 && <p className="muted">Nothing found.</p>}
       {search.trim().length >= 2 && <ExternalSearch query={search.trim()} type={type} />}
       {hasMore && (
         <p style={{ textAlign: 'center' }}>

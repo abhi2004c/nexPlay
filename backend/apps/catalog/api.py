@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from apps.reviews.analysis import analyze
 
+from .cache_utils import cached
 from .deals import deals_payload
 from .media import media_payload
 from .steam import steam_reviews_payload
@@ -55,10 +56,20 @@ class TitleViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.order_by(ordering)
         return qs
 
+    # Public data that is the same for every visitor: served from the server cache.
+    def list(self, request, *args, **kwargs):
+        data = cached(f'titles:{request.get_full_path()}', 60,
+                      lambda: dict(super(TitleViewSet, self).list(request, *args, **kwargs).data))
+        return Response(data)
+
+    def retrieve(self, request, *args, **kwargs):
+        slug = kwargs[self.lookup_field]
+        return Response(cached(f'title:{slug}', 120,
+                               lambda: dict(super(TitleViewSet, self).retrieve(request, *args, **kwargs).data)))
 
     @action(detail=True, methods=['get'])
     def analysis(self, request, slug=None):
-        return Response(analyze(self.get_object().reviews.all()))
+        return Response(cached(f'analysis:{slug}', 120, lambda: analyze(self.get_object().reviews.all())))
 
     @action(detail=True, methods=['get'])
     def deals(self, request, slug=None):
@@ -77,7 +88,9 @@ class TitleViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['get'])
     def similar(self, request, slug=None):
-        return Response(TitleSerializer(similar_titles(self.get_object()), many=True).data)
+        return Response(cached(
+            f'similar:{slug}', 600,
+            lambda: TitleSerializer(similar_titles(self.get_object()), many=True).data))
 
 
 class RecommendationsView(APIView):
@@ -88,9 +101,13 @@ class RecommendationsView(APIView):
     def get(self, request):
         if request.user.is_authenticated:
             titles, personalized = recommend_for(request.user)
-        else:
-            titles, personalized = list(Title.objects.order_by('-avg_rating', '-rating_count')[:10]), False
-        return Response({'personalized': personalized, 'results': TitleSerializer(titles, many=True).data})
+            return Response({'personalized': personalized, 'results': TitleSerializer(titles, many=True).data})
+
+        def top_rated():  # same for every logged-out visitor
+            titles = Title.objects.prefetch_related('genres').order_by('-avg_rating', '-rating_count')[:10]
+            return {'personalized': False, 'results': TitleSerializer(titles, many=True).data}
+
+        return Response(cached('recs:anon', 300, top_rated))
 
 
 class GenreViewSet(viewsets.ReadOnlyModelViewSet):
