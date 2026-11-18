@@ -11,6 +11,7 @@ from apps.reviews.analysis import analyze
 from .cache_utils import cached
 from .deals import deals_payload
 from .media import media_payload
+from .movie_info import movie_info_payload
 from .steam import steam_reviews_payload
 from .recommend import discover, recommend_for, similar_titles
 
@@ -93,6 +94,10 @@ class TitleViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['get'])
     def media(self, request, slug=None):
         return Response(media_payload(self.get_object()))
+
+    @action(detail=True, methods=['get'], url_path='movie-info')
+    def movie_info(self, request, slug=None):
+        return Response(movie_info_payload(self.get_object()))
 
     @action(detail=True, methods=['get'], url_path='steam-reviews')
     def steam_reviews(self, request, slug=None):

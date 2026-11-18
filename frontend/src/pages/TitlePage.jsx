@@ -5,6 +5,7 @@ import { useAuth } from '../auth.jsx'
 import TitleCard from '../components/TitleCard.jsx'
 import Deals from '../components/Deals.jsx'
 import Media from '../components/Media.jsx'
+import MovieInfo from '../components/MovieInfo.jsx'
 import SteamReviews from '../components/SteamReviews.jsx'
 import Reviews from '../components/Reviews.jsx'
 
@@ -67,9 +68,13 @@ export default function TitlePage() {
           </p>
           <p>{t.genres.map((g) => <span className="tag" key={g}>{g}</span>)}</p>
           <p>{t.description}</p>
-          <p className="score">
-            ★ {t.rating_count ? t.avg_rating : '–'} <span className="muted">({t.rating_count} reviews)</span>
-          </p>
+          {t.rating_count > 0 ? (
+            <p className="score">
+              ★ {t.avg_rating} <span className="muted">NexPlay · {t.rating_count} review{t.rating_count === 1 ? '' : 's'}</span>
+            </p>
+          ) : (
+            <p className="muted">No NexPlay reviews yet. Be the first to review it.</p>
+          )}
           {t.metacritic != null && (
             <p>
               <a className="metabadge" href={t.metacritic_url || undefined} target="_blank" rel="noreferrer" title="Metacritic score">
@@ -89,6 +94,9 @@ export default function TitlePage() {
         </div>
       </div>
 
+      {t.media_type === 'movie' && (
+        <MovieInfo slug={slug} nexplay={{ avg: t.avg_rating, count: t.rating_count }} />
+      )}
       {t.media_type === 'game' && <Media slug={slug} />}
       {t.media_type === 'game' && <Deals slug={slug} />}
       {t.media_type === 'game' && t.steam_app_id && <SteamReviews slug={slug} />}
