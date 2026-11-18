@@ -50,8 +50,12 @@ class Command(BaseCommand):
     def games(self):
         todo = set(Title.objects.filter(media_type='game').exclude(external_id='').values_list('external_id', flat=True))
         total, page = len(todo), 1
-        while todo and page <= 10:
-            for g in importer.rawg('/games', ordering='-added', page_size=40, page=page).get('results', []):
+        while todo and page <= 6:
+            try:
+                results = importer.rawg('/games', ordering='-added', page_size=40, page=page).get('results', [])
+            except importer.ImportFailure:  # deep list pages sometimes fail: fetch the rest one by one
+                break
+            for g in results:
                 if str(g['id']) in todo:
                     self.set('game', g['id'], (g.get('rating') or 0) * 2, g.get('ratings_count', 0))
                     todo.discard(str(g['id']))
