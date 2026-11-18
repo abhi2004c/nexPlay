@@ -15,7 +15,7 @@ export default function TitleCard({ t }) {
             <span className="chip tmdb" title={`TMDB rating from ${t.external_votes.toLocaleString()} votes`}>TMDB {t.external_rating.toFixed(1)}</span>
           )}
           {t.media_type === 'game' && t.external_rating != null && (
-            <span className="chip steam" title={`${Math.round(t.external_rating * 10)}% of ${t.external_votes.toLocaleString()} Steam reviews are positive`}>
+            <span className="chip steam" title={`${Math.round(t.external_rating * 10)}% of ${t.external_votes.toLocaleString()} Steam reviews are positive (all languages)`}>
               Steam {Math.round(t.external_rating * 10)}%
             </span>
           )}

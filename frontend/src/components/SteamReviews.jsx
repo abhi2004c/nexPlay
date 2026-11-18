@@ -24,7 +24,7 @@ export default function SteamReviews({ slug }) {
     <section className="panel steampanel">
       <h2><SteamIcon size={22} /> Steam reviews</h2>
       <p className="muted small">
-        Review totals from players on Steam, not NexPlay members. They are not included in NexPlay ratings.
+        Review totals from players on Steam, counting every language, so they can be higher than the English-only count on Steam's own page. Not NexPlay members, and not included in NexPlay ratings.
       </p>
 
       {!d && <p className="muted">Loading Steam reviews…</p>}
@@ -36,7 +36,7 @@ export default function SteamReviews({ slug }) {
           <div className="stats">
             {s.label && <div><span className="muted">Overall</span><strong className={tone(s.percent_positive)}>{s.label}</strong></div>}
             <div><span className="muted">Positive</span><strong>{s.percent_positive}%</strong></div>
-            <div><span className="muted">Reviews</span><strong>{s.total.toLocaleString()}</strong></div>
+            <div><span className="muted">Reviews (all languages)</span><strong>{s.total.toLocaleString()}</strong></div>
             {d.recent?.percent_positive != null && (
               <div>
                 <span className="muted">Last 30 days</span>

@@ -99,7 +99,7 @@ export default function TitlePage() {
                 <SteamIcon size={30} />
                 <span>
                   <strong className={steamTone(pct)}>{steamLabel(pct, t.external_votes) || `${pct}% positive`}</strong>
-                  <span className="muted small">{pct}% of {t.external_votes.toLocaleString()} Steam reviews are positive</span>
+                  <span className="muted small">{pct}% of {t.external_votes.toLocaleString()} Steam reviews are positive (all languages)</span>
                 </span>
                 <b className={`pct ${steamTone(pct)}`}>{pct}%</b>
               </a>
