@@ -1,8 +1,8 @@
-"""Movie page extras, fetched live and cached: trailer, ratings (TMDB + IMDb via OMDb) and TMDB user reviews.
+"""Movie page extras, fetched live and cached: IMDb / TMDB rating and the trailer.
 
-TMDB gives the trailer, its own rating, the IMDb id and user reviews in one request. IMDb has no
-public API, so the IMDb rating (plus Rotten Tomatoes / Metacritic) comes from OMDb, which needs a
-free OMDB_API_KEY. Without that key the IMDb badge is simply left out.
+TMDB gives the trailer, its own rating and the IMDb id in one request. IMDb has no public API, so the
+IMDb rating (plus Rotten Tomatoes / Metacritic) comes from OMDb, which needs a free OMDB_API_KEY.
+Without that key the IMDb rating is left out and the page falls back to the TMDB rating.
 """
 
 import os
@@ -31,7 +31,7 @@ def _trailer(videos):
 
 def _clean(text, limit=700):
     text = re.sub(r'\r\n?', '\n', text or '')
-    text = re.sub(r'[*_#>`]+', '', text)  # markdown markers that TMDB users sometimes include
+    text = re.sub(r'[*_#>`]+', '', text)  # markdown markers that TMDB members sometimes include
     text = re.sub(r'\n{3,}', '\n\n', text).strip()
     return text if len(text) <= limit else text[:limit].rsplit(' ', 1)[0] + '…'
 
@@ -57,33 +57,32 @@ def _omdb(imdb_id):
 
 
 def build(title):
-    d = importer.tmdb(f'/movie/{title.external_id}', append_to_response='videos,reviews',
-                      language='en-US')
+    d = importer.tmdb(f'/movie/{title.external_id}', append_to_response='videos,reviews', language='en-US')
     imdb_id = d.get('imdb_id') or ''
+    imdb_url = f'https://www.imdb.com/title/{imdb_id}/' if imdb_id else None
     omdb = _omdb(imdb_id)
     reviews = [{
-        'author': r.get('author') or 'TMDB user',
-        'rating': (r.get('author_details') or {}).get('rating'),
+        'author': r.get('author') or 'TMDB member',
+        'rating': (r.get('author_details') or {}).get('rating'),  # the member's own 0-10 score
         'text': _clean(r.get('content')),
         'date': (r.get('created_at') or '')[:10],
         'url': r.get('url'),
     } for r in (d.get('reviews') or {}).get('results', [])[:6] if (r.get('content') or '').strip()]
     return {
+        'reviews': reviews,
         'trailer': _trailer((d.get('videos') or {}).get('results', [])),
         'tmdb': {
             'score': round(d['vote_average'], 1) if d.get('vote_count') else None,
             'votes': d.get('vote_count') or 0,
             'url': f'https://www.themoviedb.org/movie/{title.external_id}',
         },
-        'imdb': {**omdb, 'url': f'https://www.imdb.com/title/{imdb_id}/'} if omdb else None,
-        'imdb_url': f'https://www.imdb.com/title/{imdb_id}/' if imdb_id else None,
-        'imdb_reviews_url': f'https://www.imdb.com/title/{imdb_id}/reviews/' if imdb_id else None,
-        'reviews': reviews,
+        'imdb': {**omdb, 'url': imdb_url} if omdb else None,
+        'imdb_url': imdb_url,
     }
 
 
 def movie_info_payload(title):
-    empty = {'trailer': None, 'tmdb': None, 'imdb': None, 'imdb_url': None, 'imdb_reviews_url': None, 'reviews': []}
+    empty = {'trailer': None, 'tmdb': None, 'imdb': None, 'imdb_url': None, 'reviews': []}
     if title.media_type != 'movie' or not title.external_id:
         return {'available': False}
     key = f'movie_info:{title.external_id}'

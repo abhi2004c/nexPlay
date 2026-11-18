@@ -110,3 +110,6 @@ a.rating:hover { border-color: var(--accent); }
 .ratelabel.imdb { color: #f5c518; } .ratelabel.tmdb { color: #01b4e4; } .ratelabel.rt { color: #fa320a; } .ratelabel.mc { color: #66cc33; } .ratelabel.nex { color: var(--accent); }
 .trailer.yt iframe { width: 100%; height: 100%; border: 0; }
 .trailer.yt, .trailer.thumb { max-width: 760px; }
+.srctag { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: .03em; padding: 1px 7px; border-radius: 5px; margin-right: 8px; vertical-align: 1px; color: #0e1015; }
+.srctag.imdb { background: #f5c518; } .srctag.tmdb { background: #01b4e4; } .srctag.nex { background: var(--accent); color: #fff; }
+a.srctag:hover { filter: brightness(1.1); }

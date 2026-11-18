@@ -5,7 +5,7 @@ import { useAuth } from '../auth.jsx'
 import TitleCard from '../components/TitleCard.jsx'
 import Deals from '../components/Deals.jsx'
 import Media from '../components/Media.jsx'
-import MovieInfo from '../components/MovieInfo.jsx'
+import MovieTrailer, { TmdbReviews } from '../components/MovieInfo.jsx'
 import SteamReviews from '../components/SteamReviews.jsx'
 import Reviews from '../components/Reviews.jsx'
 
@@ -19,6 +19,7 @@ export default function TitlePage() {
   const [msg, setMsg] = useState('')
   const [analysis, setAnalysis] = useState(null)
   const [similar, setSimilar] = useState([])
+  const [info, setInfo] = useState(null) // movie-only extras: IMDb/TMDB rating and trailer
 
   // Each part loads and renders on its own, so the title shows as soon as it arrives.
   const current = useRef(slug)
@@ -35,10 +36,19 @@ export default function TitlePage() {
   useEffect(() => {
     current.current = slug
     // clear the previous title right away instead of showing it while the new one loads
-    setT(null); setThreads([]); setAnalysis(null); setSimilar([]); setMsg('')
+    setT(null); setThreads([]); setAnalysis(null); setSimilar([]); setInfo(null); setMsg('')
     window.scrollTo(0, 0)
     load().catch((e) => setMsg(e.message))
   }, [slug, load])
+
+  // movies: IMDb rating + trailer, fetched separately so the page never waits for them
+  const isMovie = t?.media_type === 'movie'
+  useEffect(() => {
+    if (!isMovie) return
+    api(`/titles/${slug}/movie-info/`)
+      .then((d) => { if (current.current === slug) setInfo(d) })
+      .catch(() => {})
+  }, [isMovie, slug])
 
   const run = (fn, ok) => async (e) => {
     e?.preventDefault()
@@ -68,9 +78,22 @@ export default function TitlePage() {
           </p>
           <p>{t.genres.map((g) => <span className="tag" key={g}>{g}</span>)}</p>
           <p>{t.description}</p>
+          {t.media_type === 'movie' && info?.imdb?.score != null && (
+            <p className="score">
+              <a className="srctag imdb" href={info.imdb.url} target="_blank" rel="noreferrer">IMDb</a>
+              ★ {info.imdb.score}/10 {info.imdb.votes && <span className="muted">{info.imdb.votes} votes</span>}
+            </p>
+          )}
+          {t.media_type === 'movie' && info?.tmdb?.score != null && (
+            <p className="score" title="Average rating from TMDB members">
+              <a className="srctag tmdb" href={info.tmdb.url} target="_blank" rel="noreferrer">TMDB</a>
+              ★ {info.tmdb.score}/10 <span className="muted">{info.tmdb.votes.toLocaleString()} votes</span>
+            </p>
+          )}
           {t.rating_count > 0 ? (
             <p className="score">
-              ★ {t.avg_rating} <span className="muted">NexPlay · {t.rating_count} review{t.rating_count === 1 ? '' : 's'}</span>
+              <span className="srctag nex">NexPlay</span>
+              ★ {t.avg_rating} <span className="muted">{t.rating_count} review{t.rating_count === 1 ? '' : 's'}</span>
             </p>
           ) : (
             <p className="muted">No NexPlay reviews yet. Be the first to review it.</p>
@@ -94,9 +117,7 @@ export default function TitlePage() {
         </div>
       </div>
 
-      {t.media_type === 'movie' && (
-        <MovieInfo slug={slug} nexplay={{ avg: t.avg_rating, count: t.rating_count }} />
-      )}
+      {t.media_type === 'movie' && <MovieTrailer info={info} />}
       {t.media_type === 'game' && <Media slug={slug} />}
       {t.media_type === 'game' && <Deals slug={slug} />}
       {t.media_type === 'game' && t.steam_app_id && <SteamReviews slug={slug} />}
@@ -117,6 +138,7 @@ export default function TitlePage() {
       )}
 
       <Reviews slug={slug} onChange={() => load().catch(() => {})} />
+      {t.media_type === 'movie' && <TmdbReviews info={info} />}
 
       <section className="panel">
         <h2>Discussion</h2>
