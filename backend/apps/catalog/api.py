@@ -1,4 +1,4 @@
-from django.db.models import F
+from django.db.models import Count, F
 from django.db.models.functions import Mod
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
@@ -19,9 +19,11 @@ from .models import Genre, Title
 
 
 class GenreSerializer(serializers.ModelSerializer):
+    count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Genre
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'count')
 
 
 class TitleSerializer(serializers.ModelSerializer):
@@ -125,7 +127,12 @@ class RecommendationsView(APIView):
 
 
 class GenreViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Genre.objects.all()
+    """Genres with how many titles each has, most popular first (used for the home page filter pills)."""
+
+    queryset = Genre.objects.annotate(count=Count('titles')).filter(count__gt=0).order_by('-count', 'name')
     serializer_class = GenreSerializer
     permission_classes = [AllowAny]
     pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        return Response(cached('genres', 600, lambda: super(GenreViewSet, self).list(request, *args, **kwargs).data))

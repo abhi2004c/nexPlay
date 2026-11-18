@@ -1,5 +1,6 @@
 from django.db.models import Count
 from rest_framework import permissions, serializers, viewsets
+from rest_framework.response import Response
 
 from apps.catalog.models import Title
 
@@ -26,8 +27,15 @@ class WatchlistViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return WatchlistItem.objects.filter(user=self.request.user).select_related('title')
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        """Adding a title that is already on the list is not an error: return the existing entry."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        item, created = WatchlistItem.objects.get_or_create(
+            user=request.user, title=serializer.validated_data['title'],
+            defaults={'status': serializer.validated_data.get('status', WatchlistItem.Status.PLANNED)},
+        )
+        return Response(self.get_serializer(item).data, status=201 if created else 200)
 
 
 class IsAuthorOrReadOnly(permissions.BasePermission):

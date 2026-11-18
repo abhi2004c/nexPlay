@@ -1,31 +1,26 @@
 import { Link } from 'react-router-dom'
+import RatingChips from './RatingChips.jsx'
+import WatchButton from './WatchButton.jsx'
 
 export default function TitleCard({ t }) {
   const year = t.release_date?.slice(0, 4)
   return (
-    <Link to={`/title/${t.slug}`} className="card">
-      <div className={`poster ${t.media_type}`}>
-        {t.poster_url ? <img src={t.poster_url} alt="" /> : <span>{t.name[0]}</span>}
-      </div>
-      <div className="info">
-        <strong>{t.name}</strong>
-        <div className="muted">{t.media_type === 'movie' ? 'Movie' : 'Game'} · {year}</div>
-        <div className="chips">
-          {t.media_type === 'movie' && t.external_rating != null && (
-            <span className="chip tmdb" title={`TMDB rating from ${t.external_votes.toLocaleString()} votes`}>TMDB {t.external_rating.toFixed(1)}</span>
-          )}
-          {t.media_type === 'game' && t.external_rating != null && (
-            <span className="chip steam" title={`${Math.round(t.external_rating * 10)}% of ${t.external_votes.toLocaleString()} Steam reviews are positive (all languages)`}>
-              Steam {Math.round(t.external_rating * 10)}%
-            </span>
-          )}
-          {t.media_type === 'game' && t.metacritic != null && (
-            <span className="chip mc" title="Metacritic score">MC {t.metacritic}</span>
-          )}
-          {t.rating_count > 0 && <span className="chip nex" title="NexPlay members">★ {t.avg_rating}</span>}
-          {t.external_rating == null && t.metacritic == null && t.rating_count === 0 && <span className="muted small">No ratings yet</span>}
+    <div className="card">
+      <Link to={`/title/${t.slug}`} className="cardlink">
+        <div className={`poster ${t.media_type}`}>
+          {t.poster_url ? <img src={t.poster_url} alt="" loading="lazy" /> : <span>{t.name[0]}</span>}
+          <div className="overlay" aria-hidden="true">
+            <p className="ov-desc">{t.description || 'No description yet.'}</p>
+            <div className="ov-tags">{t.genres.slice(0, 3).map((g) => <span key={g}>{g}</span>)}</div>
+          </div>
         </div>
-      </div>
-    </Link>
+        <div className="info">
+          <strong>{t.name}</strong>
+          <div className="muted">{t.media_type === 'movie' ? 'Movie' : 'Game'} · {year}</div>
+          <RatingChips t={t} />
+        </div>
+      </Link>
+      <WatchButton slug={t.slug} name={t.name} />
+    </div>
   )
 }

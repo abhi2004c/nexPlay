@@ -34,7 +34,7 @@ def similar_titles(title, limit=6):
     return [t for _, t in scored[:limit]]
 
 
-def recommend_for(user, limit=10):
+def recommend_for(user, limit=14):
     """Build a genre profile from the user's ratings (rating - 5 as weight) and watchlist."""
     weights = defaultdict(float)
     seen = set()
@@ -61,7 +61,7 @@ def recommend_for(user, limit=10):
     return random.sample(best, min(limit, len(best))), True
 
 
-def discover(limit=10, exclude=()):
+def discover(limit=14, exclude=()):
     """A random selection of titles that have artwork. Different on every call."""
     pool = cached('discover_pool', 600,
                   lambda: list(Title.objects.exclude(poster_url='').values_list('id', flat=True)))
