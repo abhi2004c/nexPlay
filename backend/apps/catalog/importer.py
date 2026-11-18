@@ -13,6 +13,7 @@ from datetime import date
 
 from .models import Genre, Title
 from .net import get_json
+from .steam import steam_rating
 
 TMDB_HOSTS = ['api.themoviedb.org', 'api.tmdb.org']
 TMDB_IMG = 'https://image.tmdb.org/t/p/w500'
@@ -158,6 +159,12 @@ def import_game(rawg_id):
     d = rawg(f'/games/{rawg_id}')
     is_free = any(t.get('slug') == 'free-to-play' for t in d.get('tags', []))
     links, steam_id = _game_links(rawg_id)
+    steam = None
+    if steam_id:
+        try:
+            steam = steam_rating(steam_id)
+        except Exception:  # Steam hiccup: the rating can be filled in later by backfill_ratings
+            pass
     shots = [x['image'] for x in rawg(f'/games/{rawg_id}/screenshots').get('results', [])][:10]
     return _save(d['name'], 'game', str(rawg_id), dict(
         is_free=is_free,
@@ -165,8 +172,9 @@ def import_game(rawg_id):
         screenshots=shots,
         metacritic=d.get('metacritic'),
         metacritic_url=d.get('metacritic_url') or '',
-        external_rating=round(d['rating'] * 2, 1) if d.get('ratings_count') else None,  # RAWG is out of 5
-        external_votes=d.get('ratings_count') or 0,
+        # games are rated by Steam players: percent positive on a 0-10 scale (84% -> 8.4)
+        external_rating=round(steam[0] / 10, 1) if steam else None,
+        external_votes=steam[1] if steam else 0,
         **({'steam_app_id': steam_id} if steam_id else {}),
         description=(d.get('description_raw') or '')[:2000],
         release_date=parse_date(d.get('released')),

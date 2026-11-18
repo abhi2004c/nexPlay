@@ -67,6 +67,15 @@ def parse(results):
     }
 
 
+def steam_rating(app_id):
+    """(percent_positive, total_reviews) from Steam's review histogram, or None if there are no reviews."""
+    data = get_json(HISTOGRAM.format(id=app_id))
+    if not data.get('success'):
+        return None
+    s = parse(data.get('results') or {})['summary']
+    return (s['percent_positive'], s['total']) if s['total'] else None
+
+
 def steam_reviews_payload(title):
     if not title.steam_app_id:
         return {'available': False}

@@ -6,10 +6,13 @@ Movies: TMDB's popular lists carry vote_average for 20 movies per request, so mo
 handful of requests; any left over are fetched one by one. Games: same idea with RAWG's list.
 """
 
+import time
+
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.catalog import importer
 from apps.catalog.models import Title
+from apps.catalog.steam import steam_rating
 
 
 class Command(BaseCommand):
@@ -48,19 +51,19 @@ class Command(BaseCommand):
         self.stdout.write(f'Movies: {total} updated ({total - len(todo)} from list pages, {len(todo)} individually)')
 
     def games(self):
-        todo = set(Title.objects.filter(media_type='game').exclude(external_id='').values_list('external_id', flat=True))
-        total, page = len(todo), 1
-        while todo and page <= 6:
+        """Games are rated by Steam players: percent positive (84%) stored as 8.4 out of 10."""
+        done = skipped = no_steam = 0
+        for t in Title.objects.filter(media_type='game'):
+            if not t.steam_app_id:
+                no_steam += 1
+                continue
             try:
-                results = importer.rawg('/games', ordering='-added', page_size=40, page=page).get('results', [])
-            except importer.ImportFailure:  # deep list pages sometimes fail: fetch the rest one by one
-                break
-            for g in results:
-                if str(g['id']) in todo:
-                    self.set('game', g['id'], (g.get('rating') or 0) * 2, g.get('ratings_count', 0))
-                    todo.discard(str(g['id']))
-            page += 1
-        for ext_id in sorted(todo):
-            d = importer.rawg(f'/games/{ext_id}')
-            self.set('game', ext_id, (d.get('rating') or 0) * 2, d.get('ratings_count', 0))
-        self.stdout.write(f'Games: {total} updated ({total - len(todo)} from list pages, {len(todo)} individually)')
+                r = steam_rating(t.steam_app_id)
+            except Exception:  # one failure must not stop the rest; re-run to retry
+                skipped += 1
+                continue
+            Title.objects.filter(pk=t.pk).update(
+                external_rating=round(r[0] / 10, 1) if r else None, external_votes=r[1] if r else 0)
+            done += 1
+            time.sleep(0.15)  # be gentle with Steam
+        self.stdout.write(f'Games: {done} rated from Steam, {no_steam} not on Steam, {skipped} failed (re-run to retry)')

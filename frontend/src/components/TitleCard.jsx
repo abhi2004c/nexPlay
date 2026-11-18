@@ -14,11 +14,13 @@ export default function TitleCard({ t }) {
           {t.media_type === 'movie' && t.external_rating != null && (
             <span className="chip tmdb" title={`TMDB rating from ${t.external_votes.toLocaleString()} votes`}>TMDB {t.external_rating.toFixed(1)}</span>
           )}
+          {t.media_type === 'game' && t.external_rating != null && (
+            <span className="chip steam" title={`${Math.round(t.external_rating * 10)}% of ${t.external_votes.toLocaleString()} Steam reviews are positive`}>
+              Steam {Math.round(t.external_rating * 10)}%
+            </span>
+          )}
           {t.media_type === 'game' && t.metacritic != null && (
             <span className="chip mc" title="Metacritic score">MC {t.metacritic}</span>
-          )}
-          {t.media_type === 'game' && t.metacritic == null && t.external_rating != null && (
-            <span className="chip rawg" title={`RAWG rating from ${t.external_votes.toLocaleString()} votes`}>RAWG {t.external_rating.toFixed(1)}</span>
           )}
           {t.rating_count > 0 && <span className="chip nex" title="NexPlay members">★ {t.avg_rating}</span>}
           {t.external_rating == null && t.metacritic == null && t.rating_count === 0 && <span className="muted small">No ratings yet</span>}

@@ -90,6 +90,12 @@ export default function TitlePage() {
               ★ {info.tmdb.score}/10 <span className="muted">{info.tmdb.votes.toLocaleString()} votes</span>
             </p>
           )}
+          {t.media_type === 'game' && t.external_rating != null && (
+            <p className="score" title="Share of positive reviews from Steam players">
+              <span className="srctag steam">Steam</span>
+              ★ {Math.round(t.external_rating * 10)}% positive <span className="muted">{t.external_votes.toLocaleString()} reviews</span>
+            </p>
+          )}
           {t.rating_count > 0 ? (
             <p className="score">
               <span className="srctag nex">NexPlay</span>
