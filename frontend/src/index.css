@@ -118,3 +118,10 @@ a.srctag:hover { filter: brightness(1.1); }
 .chip.tmdb { background: #01b4e4; } .chip.mc { background: #66cc33; } .chip.rawg { background: #ff8a4c; } .chip.nex { background: var(--accent); color: #fff; }
 .chip.steam { background: #1b9fe0; color: #fff; }
 .srctag.steam { background: #1b2838; color: #c7d5e0; border: 1px solid #2a475e; }
+.steamrating { display: inline-flex; align-items: center; gap: 12px; padding: 10px 14px; margin: 6px 0 10px; border-radius: 10px; background: #1b2838; border: 1px solid #2a475e; color: #c7d5e0; max-width: 100%; }
+.steamrating:hover { border-color: #66c0f4; }
+.steamrating > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.steamrating strong { font-size: 16px; }
+.steamrating .muted { color: #8f98a0; }
+.steamrating .pct { font-size: 22px; margin-left: 6px; }
+.steamrating .positive { color: #66c0f4; } .steamrating .neutral { color: #b9a074; } .steamrating .negative { color: #a34c25; }

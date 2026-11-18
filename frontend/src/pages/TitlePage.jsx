@@ -7,6 +7,8 @@ import Deals from '../components/Deals.jsx'
 import Media from '../components/Media.jsx'
 import MovieTrailer, { TmdbReviews } from '../components/MovieInfo.jsx'
 import SteamReviews from '../components/SteamReviews.jsx'
+import SteamIcon from '../components/SteamIcon.jsx'
+import { steamLabel, steamTone } from '../steam.js'
 import Reviews from '../components/Reviews.jsx'
 
 export default function TitlePage() {
@@ -90,12 +92,19 @@ export default function TitlePage() {
               ★ {info.tmdb.score}/10 <span className="muted">{info.tmdb.votes.toLocaleString()} votes</span>
             </p>
           )}
-          {t.media_type === 'game' && t.external_rating != null && (
-            <p className="score" title="Share of positive reviews from Steam players">
-              <span className="srctag steam">Steam</span>
-              ★ {Math.round(t.external_rating * 10)}% positive <span className="muted">{t.external_votes.toLocaleString()} reviews</span>
-            </p>
-          )}
+          {t.media_type === 'game' && t.external_rating != null && (() => {
+            const pct = Math.round(t.external_rating * 10)
+            return (
+              <a className="steamrating" href={`https://store.steampowered.com/app/${t.steam_app_id}#app_reviews_hash`} target="_blank" rel="noreferrer" title="Open the reviews on Steam">
+                <SteamIcon size={30} />
+                <span>
+                  <strong className={steamTone(pct)}>{steamLabel(pct, t.external_votes) || `${pct}% positive`}</strong>
+                  <span className="muted small">{pct}% of {t.external_votes.toLocaleString()} Steam reviews are positive</span>
+                </span>
+                <b className={`pct ${steamTone(pct)}`}>{pct}%</b>
+              </a>
+            )
+          })()}
           {t.rating_count > 0 ? (
             <p className="score">
               <span className="srctag nex">NexPlay</span>
