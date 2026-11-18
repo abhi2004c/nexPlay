@@ -18,7 +18,7 @@ export default function App() {
         <div className="grow" />
         {user ? (
           <>
-            <span className="muted">Hi, {user.username}</span>
+            <span className="avatar" title={user.username} aria-label={`Signed in as ${user.username}`}>{user.username[0].toUpperCase()}</span>
             <button className="ghost" onClick={logout}>Log out</button>
           </>
         ) : (

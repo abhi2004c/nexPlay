@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import TitleCard from '../components/TitleCard.jsx'
 import Hero from '../components/Hero.jsx'
+import Rail from '../components/Rail.jsx'
 import { useAuth } from '../auth.jsx'
 import ExternalSearch from '../components/ExternalSearch.jsx'
 
@@ -73,13 +74,12 @@ export default function Home() {
       {!filtering && <Hero titles={featured} />}
 
       {rail.length > 0 && !filtering && (
-        <section className="rail">
-          <h2>{recs.personalized ? 'Recommended for you' : 'More to explore'}</h2>
-          {!recs.personalized && (
-            <p className="muted small">Rate a few titles or add some to your watchlist to get picks based on your taste.</p>
-          )}
-          <div className="scroll">{rail.map((t) => <TitleCard key={t.id} t={t} />)}</div>
-        </section>
+        <Rail
+          title={recs.personalized ? 'Recommended for you' : 'More to explore'}
+          hint={recs.personalized ? undefined : 'Rate a few titles or add some to your watchlist to get picks based on your taste.'}
+        >
+          {rail.map((t) => <TitleCard key={t.id} t={t} />)}
+        </Rail>
       )}
 
       <div className="filterbar">
