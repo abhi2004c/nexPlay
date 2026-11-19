@@ -27,6 +27,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'email', 'bio', 'avatar_url', 'list_visibility', 'has_password')
         read_only_fields = ('email',)
 
+    def validate_list_visibility(self, value):
+        if value not in ('private', 'friends'):  # lists are never public
+            raise serializers.ValidationError('Choose "Only me" or "My friends".')
+        return value
+
     def get_has_password(self, u):
         return u.has_usable_password()
 

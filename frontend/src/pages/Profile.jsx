@@ -15,7 +15,6 @@ const SECTIONS = [
 const VISIBILITY = [
   ['private', 'Only me'],
   ['friends', 'My friends'],
-  ['public', 'Everyone (even without an account)'],
 ]
 
 function Settings({ profile, onSaved }) {
