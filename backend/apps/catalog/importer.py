@@ -76,65 +76,32 @@ def rawg(path, **params):
 
 
 # ---- lists (bulk) --------------------------------------------------------------
-def popular_movie_ids(count):
-    ids, page = [], 1
-    while len(ids) < count:
-        results = tmdb('/movie/popular', page=page, language='en-US')['results']
+MAX_LIST_PAGES = 60  # how deep into the popularity lists we are willing to look for new titles
+
+
+def _collect(count, skip, fetch_page, id_of):
+    """The first `count` ids from a popularity list that are not in `skip` (ids already imported)."""
+    ids, seen, page = [], set(skip), 1
+    while len(ids) < count and page <= MAX_LIST_PAGES:
+        results = fetch_page(page)
         if not results:
             break
-        ids += [m['id'] for m in results]
+        for r in results:
+            i = str(id_of(r))
+            if i not in seen:
+                seen.add(i)
+                ids.append(i)
         page += 1
     return ids[:count]
 
 
-def popular_game_ids(count):
-    ids, page = [], 1
-    while len(ids) < count:
-        results = rawg('/games', ordering='-added', page_size=40, page=page)['results']
-        if not results:
-            break
-        ids += [g['id'] for g in results]
-        page += 1
-    return ids[:count]
+def popular_movie_ids(count, skip=()):
+    return _collect(count, skip, lambda p: tmdb('/movie/popular', page=p, language='en-US')['results'], lambda m: m['id'])
 
 
-# ---- search (on demand) -------------------------------------------------------------
-def search(query, media_type, limit=8):
-    """Return lightweight matches (not saved): [{media_type, external_id, name, year, poster}]."""
-    out = []
-    if media_type == 'movie':
-        for m in tmdb('/search/movie', query=query, language='en-US', include_adult='false').get('results', [])[:limit]:
-            out.append({
-                'media_type': 'movie', 'external_id': str(m['id']), 'name': m.get('title', ''),
-                'year': (m.get('release_date') or '')[:4],
-                'poster': f"{TMDB_IMG_SMALL}{m['poster_path']}" if m.get('poster_path') else '',
-            })
-    else:
-        for g in rawg('/games', search=query, page_size=limit, search_precise='true').get('results', []):
-            out.append({
-                'media_type': 'game', 'external_id': str(g['id']), 'name': g.get('name', ''),
-                'year': (g.get('released') or '')[:4], 'poster': g.get('background_image') or '',
-            })
-    return out
+def popular_game_ids(count, skip=()):
+    return _collect(count, skip, lambda p: rawg('/games', ordering='-added', page_size=40, page=p)['results'], lambda g: g['id'])
 
-
-# ---- fetch + save one title ------------------------------------------------------------
-def _game_links(rawg_id):
-    """Where a game can be bought/downloaded, plus its Steam app id if it is on Steam."""
-    links, steam_id = [], ''
-    for r in rawg(f'/games/{rawg_id}/stores').get('results', []):
-        url = (r.get('url') or '').replace('http://', 'https://')
-        if not url:
-            continue
-        links.append({'name': RAWG_STORES.get(r.get('store_id'), 'Store'), 'url': url})
-        m = re.search(r'store\.steampowered\.com/app/(\d+)', url)
-        if m:
-            steam_id = m.group(1)
-    return links, steam_id
-
-
-STEAM_COVER = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg'
-TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w780'
 
 
 def steam_cover(app_id):
@@ -156,6 +123,16 @@ def _save(name, media_type, external_id, fields, genre_names):
     return title
 
 
+def imdb_fields(imdb_id):
+    """IMDb rating and vote count from OMDb (empty when there is no key, id or rating)."""
+    from .movie_info import _omdb  # imported here: movie_info imports this module
+    o = _omdb(imdb_id) if imdb_id else None
+    if not o or o['score'] is None:
+        return {}
+    votes = int((o['votes'] or '0').replace(',', '') or 0)
+    return {'imdb_rating': o['score'], 'imdb_votes': votes}
+
+
 def import_movie(tmdb_id):
     d = tmdb(f'/movie/{tmdb_id}', append_to_response='credits', language='en-US')
     director = next((c['name'] for c in d.get('credits', {}).get('crew', []) if c.get('job') == 'Director'), '')
@@ -168,6 +145,7 @@ def import_movie(tmdb_id):
         runtime_minutes=d.get('runtime') or None,
         external_rating=round(d['vote_average'], 1) if d.get('vote_count') else None,
         external_votes=d.get('vote_count') or 0,
+        **imdb_fields(d.get('imdb_id')),
     ), [g['name'] for g in d.get('genres', [])])
 
 

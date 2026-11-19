@@ -30,6 +30,8 @@ class Title(models.Model):
     external_id = models.CharField(max_length=60, blank=True)  # TMDB / RAWG id
     external_rating = models.FloatField(null=True, blank=True)  # TMDB (movies) / RAWG x2 (games), 0-10
     external_votes = models.PositiveIntegerField(default=0)
+    imdb_rating = models.FloatField(null=True, blank=True)  # movies: IMDb score (via OMDb), shown on cards
+    imdb_votes = models.PositiveIntegerField(default=0)
     steam_app_id = models.CharField(max_length=20, blank=True)  # for player counts
     cheapshark_id = models.CharField(max_length=30, blank=True)  # for prices
     is_free = models.BooleanField(default=False)  # free-to-play game

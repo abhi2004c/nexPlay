@@ -35,6 +35,7 @@ class TitleSerializer(serializers.ModelSerializer):
             'id', 'slug', 'media_type', 'name', 'description', 'release_date', 'poster_url', 'backdrop_url',
             'genres', 'creator', 'runtime_minutes', 'platforms', 'avg_rating', 'rating_count',
             'metacritic', 'metacritic_url', 'steam_app_id', 'external_rating', 'external_votes',
+            'imdb_rating', 'imdb_votes',
         )
 
 

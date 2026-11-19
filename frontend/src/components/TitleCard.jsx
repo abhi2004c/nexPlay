@@ -3,8 +3,11 @@ import RatingChips from './RatingChips.jsx'
 import WatchButton from './WatchButton.jsx'
 import { cleanDescription } from '../text.js'
 
-// The one score shown on the poster: TMDB for movies, Steam % (else Metacritic) for games, else NexPlay.
+// The one score shown on the poster: IMDb for movies (TMDB until it is known), Steam % (else Metacritic) for games, else NexPlay.
 function mainBadge(t) {
+  if (t.media_type === 'movie' && t.imdb_rating != null) {
+    return { value: t.imdb_rating.toFixed(1), label: 'IMDb', tone: t.imdb_rating >= 7.5 ? 'good' : t.imdb_rating >= 6 ? 'mid' : 'low' }
+  }
   if (t.media_type === 'movie' && t.external_rating != null) {
     return { value: t.external_rating.toFixed(1), label: 'TMDB', tone: t.external_rating >= 7.5 ? 'good' : t.external_rating >= 6 ? 'mid' : 'low' }
   }
