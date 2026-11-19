@@ -25,10 +25,18 @@ export function AuthProvider({ children }) {
     await login(username, password)
   }
 
+  async function googleLogin(credential) {
+    const t = await api('/auth/google/', { method: 'POST', body: { credential } })
+    localStorage.setItem('token', t.access)
+    setUser(await api('/auth/me/'))
+  }
+
+  const refreshUser = () => api('/auth/me/').then(setUser)
+
   function logout() {
     localStorage.removeItem('token')
     setUser(null)
   }
 
-  return <Ctx.Provider value={{ user, login, register, logout }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ user, login, register, logout, googleLogin, refreshUser }}>{children}</Ctx.Provider>
 }

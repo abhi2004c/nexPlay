@@ -5,8 +5,8 @@ import { useAuth } from '../auth.jsx'
 import TitleCard from '../components/TitleCard.jsx'
 
 const STATUSES = {
-  planned: 'Plan to watch/play',
-  in_progress: 'In progress',
+  planned: 'Wishlist',
+  in_progress: 'Watching / playing',
   completed: 'Completed',
   dropped: 'Dropped',
 }

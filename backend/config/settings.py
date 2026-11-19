@@ -104,6 +104,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'external_search': '60/hour',   # per logged-in user
         'external_import': '20/day',    # per logged-in user
+        'auth_email': '20/hour',        # password reset + Google sign-in, per IP
     },
 }
 

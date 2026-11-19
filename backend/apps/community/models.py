@@ -37,3 +37,37 @@ class Comment(models.Model):
 
     class Meta:
         ordering = ['created_at']
+
+
+class Friendship(models.Model):
+    """A friend request; once accepted the two people are friends (one row per pair)."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        ACCEPTED = 'accepted', 'Accepted'
+
+    from_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='friend_requests_sent')
+    to_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='friend_requests_received')
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['from_user', 'to_user'], name='one_request_per_direction'),
+            models.CheckConstraint(condition=~models.Q(from_user=models.F('to_user')), name='no_self_friend'),
+        ]
+
+
+class Message(models.Model):
+    """A chat message between two friends; may carry a movie/game to recommend or ask about."""
+
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='messages_sent')
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='messages_received')
+    body = models.TextField(blank=True, max_length=2000)
+    title = models.ForeignKey('catalog.Title', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [models.Index(fields=['recipient', 'sender', 'created_at'])]

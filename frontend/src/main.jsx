@@ -5,6 +5,7 @@ import './index.css'
 import './theme.css'
 import './pages-theme.css'
 import './search-theme.css'
+import './social-theme.css'
 import App from './App.jsx'
 import { AuthProvider } from './auth.jsx'
 

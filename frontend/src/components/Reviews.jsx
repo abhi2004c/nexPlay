@@ -183,7 +183,7 @@ export default function Reviews({ slug, onChange }) {
 
       {others.map((r) => (
         <div className="review" key={r.id}>
-          <strong>{r.username}</strong> <span className="score">★ {r.rating}</span>
+          <strong><Link to={`/u/${r.username}`}>{r.username}</Link></strong> <span className="score">★ {r.rating}</span>
           <span className="muted small"> · {when(r.created_at)}</span>
           <p>{r.body}</p>
           <VoteButtons r={r} user={user} onVote={vote} />
