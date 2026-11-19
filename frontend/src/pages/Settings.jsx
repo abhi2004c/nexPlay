@@ -1,10 +1,93 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth.jsx'
+import Avatar from '../components/Avatar.jsx'
 
 function Note({ ok, children }) {
   return children ? <p className={ok ? 'okmsg' : 'error'} role={ok ? 'status' : 'alert'}>{children}</p> : null
+}
+
+const SIZE = 256 // pictures are cropped to a square and shrunk to this many pixels before upload
+
+// Centre-crop to a square, shrink and re-encode as JPEG in the browser, so uploads are tiny (~20-40 KB).
+function resizeToJpeg(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const side = Math.min(img.width, img.height)
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = SIZE
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#fff' // transparent PNGs get a white background in a JPEG
+      ctx.fillRect(0, 0, SIZE, SIZE)
+      ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, SIZE, SIZE)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.85))
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file is not an image we can read.')) }
+    img.src = url
+  })
+}
+
+function PhotoForm({ user }) {
+  const { refreshUser } = useAuth()
+  const input = useRef(null)
+  const [preview, setPreview] = useState(null) // data URL of the resized picture, before saving
+  const [msg, setMsg] = useState({ ok: false, text: '' })
+  const [busy, setBusy] = useState(false)
+
+  async function pick(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) return setMsg({ ok: false, text: 'Please choose an image file.' })
+    try { setPreview(await resizeToJpeg(file)); setMsg({ ok: false, text: '' }) } catch (err) { setMsg({ ok: false, text: err.message }) }
+  }
+  async function save() {
+    setBusy(true)
+    try {
+      await api('/auth/avatar/', { method: 'POST', body: { data: preview } })
+      await refreshUser()
+      setPreview(null)
+      setMsg({ ok: true, text: 'Profile picture updated.' })
+    } catch (err) { setMsg({ ok: false, text: err.message }) } finally { setBusy(false) }
+  }
+  async function remove() {
+    setBusy(true)
+    try {
+      await api('/auth/avatar/', { method: 'DELETE' })
+      await refreshUser()
+      setMsg({ ok: true, text: 'Picture removed.' })
+    } catch (err) { setMsg({ ok: false, text: err.message }) } finally { setBusy(false) }
+  }
+
+  return (
+    <section className="panel settings">
+      <h2>Profile picture</h2>
+      <div className="photorow">
+        {preview ? <span className="avatar" style={{ width: 96, height: 96 }}><img src={preview} alt="New picture preview" /></span>
+          : <Avatar name={user.username} url={user.avatar_url} size={96} />}
+        <div className="photoactions">
+          <input ref={input} type="file" accept="image/*" onChange={pick} hidden />
+          {preview ? (
+            <>
+              <button className="btn" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save picture'}</button>
+              <button className="ghost" onClick={() => setPreview(null)} disabled={busy}>Cancel</button>
+            </>
+          ) : (
+            <>
+              <button className="btn" onClick={() => input.current.click()}>Choose a photo</button>
+              {user.avatar_url && <button className="ghost" onClick={remove} disabled={busy}>Remove</button>}
+            </>
+          )}
+        </div>
+      </div>
+      <p className="muted small">Any image works. It is cropped to a square from the centre and shrunk before it is uploaded. Everyone can see it.</p>
+      <Note ok={msg.ok}>{msg.text}</Note>
+    </section>
+  )
 }
 
 function UsernameForm({ user }) {
@@ -107,6 +190,7 @@ export default function Settings() {
   return (
     <>
       <div className="pagehead"><div><h1>Account settings</h1><p className="muted">{user.email || 'No email on this account'}</p></div></div>
+      <PhotoForm user={user} />
       <UsernameForm user={user} />
       <PasswordForm user={user} />
       <p className="muted small">Your bio and who can see your lists are on <Link to={`/u/${user.username}`}>your profile</Link>.</p>

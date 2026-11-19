@@ -150,3 +150,48 @@ class ReviewReportTests(TestCase):
         self.assertEqual(client_for(bob).post(f'/api/reviews/{r.id}/report/', {'reason': 'spam'}).status_code, 200)
         self.assertEqual(ReviewReport.objects.count(), 1)
         self.assertTrue(client_for(bob).get('/api/reviews/?title=heat').json()['results'][0]['contains_spoilers'])
+
+
+class AvatarTests(TestCase):
+    JPEG = bytes([0xFF, 0xD8, 0xFF, 0xE0]) + b'fake-jpeg-body' * 10
+
+    def upload(self, client, blob):
+        import base64
+        return client.post('/api/auth/avatar/', {'data': 'data:image/jpeg;base64,' + base64.b64encode(blob).decode()}, format='json')
+
+    def test_upload_serve_and_remove(self):
+        ann = make_user('ann')
+        c = client_for(ann)
+        self.assertEqual(c.get('/api/auth/me/').json()['avatar_url'], '')
+        r = self.upload(c, self.JPEG)
+        self.assertEqual(r.status_code, 200)
+        url = r.json()['avatar_url']
+        self.assertTrue(url.startswith('/users/ann/avatar/?v=1'))
+        pic = APIClient().get('/api/users/ann/avatar/')  # anyone can load it, no login
+        self.assertEqual(pic.status_code, 200)
+        self.assertEqual(pic['Content-Type'], 'image/jpeg')
+        self.assertIn('immutable', pic['Cache-Control'])
+        self.assertEqual(b''.join(pic.streaming_content) if pic.streaming else pic.content, self.JPEG)
+        self.assertTrue(self.upload(c, self.JPEG).json()['avatar_url'].endswith('v=2'))  # new URL, so caches refresh
+        self.assertEqual(c.delete('/api/auth/avatar/').json()['avatar_url'], '')
+        self.assertEqual(APIClient().get('/api/users/ann/avatar/').status_code, 404)
+
+    def test_rejects_bad_uploads_and_needs_login(self):
+        ann = make_user('ann')
+        c = client_for(ann)
+        self.assertEqual(self.upload(c, b'GIF89a-not-a-jpeg').status_code, 400)
+        self.assertEqual(self.upload(c, self.JPEG[:4] + b'x' * (151 * 1024)).status_code, 400)
+        self.assertEqual(c.post('/api/auth/avatar/', {'data': '!!!not base64!!!'}, format='json').status_code, 400)
+        self.assertEqual(APIClient().post('/api/auth/avatar/', {'data': 'x'}, format='json').status_code, 401)
+
+    def test_picture_shows_on_profile_and_friend_lists(self):
+        ann, bob = make_user('ann'), make_user('bob')
+        self.upload(client_for(ann), self.JPEG)
+        self.assertTrue(client_for(bob).get('/api/users/ann/').json()['avatar_url'].startswith('/users/ann/avatar/'))
+
+    def test_deleting_account_removes_picture(self):
+        from apps.accounts.models import Avatar
+        ann = make_user('ann')
+        self.upload(client_for(ann), self.JPEG)
+        client_for(ann).post('/api/auth/delete-account/', {'password': PW}, format='json')
+        self.assertEqual(Avatar.objects.count(), 0)

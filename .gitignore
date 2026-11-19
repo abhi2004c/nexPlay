@@ -6,3 +6,4 @@ dist/
 db.sqlite3
 staticfiles/
 __pycache__/
+.github

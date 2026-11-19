@@ -10,6 +10,7 @@ from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.api import avatar_of
 from apps.accounts.models import User
 from apps.catalog.api import TitleSerializer
 from apps.catalog.models import Title
@@ -63,7 +64,7 @@ def friend_ids(user):
 
 
 def mini(u):
-    return {'username': u.username, 'avatar_url': u.avatar_url}
+    return {'username': u.username, 'avatar_url': avatar_of(u)}
 
 
 def can_see_list(viewer, owner):
@@ -93,7 +94,7 @@ class ProfileView(APIView):
                 relation = 'friends' if f.status == 'accepted' else ('request_sent' if f.from_user_id == viewer.id else 'request_received')
 
         data = {
-            'username': owner.username, 'bio': owner.bio, 'avatar_url': owner.avatar_url,
+            'username': owner.username, 'bio': owner.bio, 'avatar_url': avatar_of(owner),
             'joined': owner.date_joined, 'relation': relation, 'request_id': request_id,
             'list_visibility': owner.list_visibility,
             'friend_count': len(friend_ids(owner)),

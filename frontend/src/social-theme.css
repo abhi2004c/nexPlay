@@ -117,3 +117,8 @@ button.link { background: none; padding: 0; color: #a78bfa; font-weight: 600; }
 /* keep the top bar on one row on laptops: the search box gives way first */
 .hsearch { flex: 1 1 160px; max-width: 340px; min-width: 140px; }
 @media (min-width: 861px) { .bar { flex-wrap: nowrap; } .bar nav { flex-shrink: 0; } }
+
+/* profile picture settings */
+.photorow { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.photoactions { display: flex; gap: 8px; flex-wrap: wrap; }
+.settings .avatar img { width: 100%; height: 100%; object-fit: cover; }

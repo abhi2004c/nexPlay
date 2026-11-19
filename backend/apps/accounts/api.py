@@ -1,3 +1,5 @@
+import base64
+import binascii
 import json
 import os
 import re
@@ -5,6 +7,7 @@ import urllib.parse
 import urllib.request
 
 from django.conf import settings
+from django.http import Http404, HttpResponse
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
@@ -16,11 +19,25 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .mail import send_email
-from .models import User
+from .models import Avatar, User
+
+MAX_AVATAR_BYTES = 150 * 1024
+
+
+def avatar_of(user):
+    """Where to load someone's picture: an API path for an uploaded one (the frontend adds the API address),
+    else the Google picture (full URL), else empty."""
+    if user.avatar_version:
+        return f'/users/{urllib.parse.quote(user.username, safe="")}/avatar/?v={user.avatar_version}'
+    return user.avatar_url
 
 
 class UserSerializer(serializers.ModelSerializer):
     has_password = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, u):
+        return avatar_of(u)
 
     class Meta:
         model = User
@@ -211,3 +228,49 @@ class DeleteAccountView(APIView):
         for t in titles:  # their reviews are gone, so the averages must be recomputed
             refresh_title_rating(t)
         return Response(status=204)
+
+
+class AvatarView(APIView):
+    """POST {data: <base64 JPEG>} sets your profile picture; DELETE removes it."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        raw = str(request.data.get('data', ''))
+        if ',' in raw[:64]:  # tolerate a data: URL prefix
+            raw = raw.split(',', 1)[1]
+        try:
+            blob = base64.b64decode(raw, validate=True)
+        except (binascii.Error, ValueError):
+            return Response({'detail': 'That is not a valid image.'}, status=400)
+        if len(blob) > MAX_AVATAR_BYTES:
+            return Response({'detail': 'The picture is too large (150 KB max after resizing).'}, status=400)
+        if blob[:3] != bytes([0xFF, 0xD8, 0xFF]):  # JPEG signature; the browser always sends a resized JPEG
+            return Response({'detail': 'Please upload a JPEG image.'}, status=400)
+        Avatar.objects.update_or_create(user=request.user, defaults={'data': blob})
+        request.user.avatar_version += 1
+        request.user.save(update_fields=['avatar_version'])
+        return Response(UserSerializer(request.user).data)
+
+    def delete(self, request):
+        Avatar.objects.filter(user=request.user).delete()
+        request.user.avatar_version = 0
+        request.user.save(update_fields=['avatar_version'])
+        return Response(UserSerializer(request.user).data)
+
+
+class AvatarFileView(APIView):
+    """GET /api/users/<username>/avatar/ : the picture itself, cached hard (the URL changes with each upload)."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def get(self, request, username):
+        a = Avatar.objects.filter(user__username__iexact=username, user__is_active=True).first()
+        if a is None:
+            raise Http404
+        resp = HttpResponse(bytes(a.data), content_type='image/jpeg')
+        resp['Cache-Control'] = 'public, max-age=31536000, immutable'
+        resp['X-Content-Type-Options'] = 'nosniff'
+        resp['Content-Security-Policy'] = "default-src 'none'; sandbox"
+        return resp

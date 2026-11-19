@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from django.http import JsonResponse
-from apps.accounts.api import (ChangePasswordView, DeleteAccountView, GoogleLoginView, MeView, PasswordResetConfirmView, PasswordResetRequestView,
+from apps.accounts.api import (AvatarFileView, AvatarView, ChangePasswordView, DeleteAccountView, GoogleLoginView, MeView, PasswordResetConfirmView, PasswordResetRequestView,
                                RegisterView)
 from apps.community.social import (ChatView, ConversationsView, FriendAcceptView, FriendDeleteView,
                                    FriendRequestView, FriendsView, ProfileView, UnreadView)
@@ -32,6 +32,8 @@ urlpatterns = [
     path('api/auth/token/', TokenObtainPairView.as_view()),
     path('api/auth/token/refresh/', TokenRefreshView.as_view()),
     path('api/auth/me/', MeView.as_view()),
+    path('api/auth/avatar/', AvatarView.as_view()),
+    path('api/users/<str:username>/avatar/', AvatarFileView.as_view()),
     path('api/auth/change-password/', ChangePasswordView.as_view()),
     path('api/auth/delete-account/', DeleteAccountView.as_view()),
     path('api/auth/google/', GoogleLoginView.as_view()),
