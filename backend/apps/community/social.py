@@ -64,7 +64,7 @@ class ProfileView(APIView):
         data = {
             'username': owner.username, 'bio': owner.bio, 'avatar_url': owner.avatar_url,
             'joined': owner.date_joined, 'relation': relation, 'request_id': request_id,
-            'list_visibility': owner.list_visibility if me else None,
+            'list_visibility': owner.list_visibility,
             'friend_count': len(friend_ids(owner)),
         }
         allowed = can_see_list(viewer, owner)
@@ -72,9 +72,7 @@ class ProfileView(APIView):
         if allowed:
             items = WatchlistItem.objects.filter(user=owner).select_related('title').prefetch_related('title__genres')
             data['list'] = [{'status': i.status, 'title': TitleSerializer(i.title).data} for i in items]
-        else:
-            counts = WatchlistItem.objects.filter(user=owner).values('status').annotate(n=Count('id'))
-            data['list_counts'] = {c['status']: c['n'] for c in counts}  # numbers only, no titles
+        # when hidden, nothing about the list is revealed: no titles and no counts
         reviews = Review.objects.filter(user=owner).select_related('title').order_by('-created_at')[:10]
         data['reviews'] = [
             {'id': r.id, 'rating': r.rating, 'body': r.body, 'created_at': r.created_at,

@@ -98,9 +98,6 @@ export default function Profile() {
   if (error) return <p className="error">{error === 'Not found.' ? 'No such user.' : error}</p>
   if (!p) return <p className="muted">Loading…</p>
 
-  const counts = p.list_counts || {}
-  const total = Object.values(counts).reduce((a, b) => a + b, 0)
-
   return (
     <>
       <header className="phead">
@@ -130,11 +127,8 @@ export default function Profile() {
         })
       ) : (
         <div className="panel lock">
-          <strong>🔒 {p.username}'s lists are {p.list_visibility === 'private' ? 'private' : 'for friends only'}.</strong>
-          <p className="muted">
-            {total > 0 ? `${total} title${total === 1 ? '' : 's'} saved. ` : ''}
-            {p.relation === 'friends' ? '' : 'Become friends to see them, if they allow it.'}
-          </p>
+          <strong>🔒 This list is private.</strong>
+          {p.list_visibility === 'friends' && <p className="muted">Only {p.username}'s friends can see it.</p>}
         </div>
       )}
       {p.list_visible && p.list.length === 0 && (
