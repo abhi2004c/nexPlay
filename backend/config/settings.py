@@ -114,6 +114,9 @@ SIMPLE_JWT = {"ACCESS_TOKEN_LIFETIME": timedelta(days=1)}
 
 if not DEBUG:
     ALLOWED_HOSTS.append(".onrender.com")
+    # Render terminates HTTPS in front of the app; without this Django thinks requests are plain http and
+    # the admin login fails its CSRF origin check ("Origin checking failed").
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     STORAGES = {
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
         "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},

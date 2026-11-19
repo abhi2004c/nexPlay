@@ -29,7 +29,9 @@
 .btn.big:disabled { opacity: .6; cursor: wait; }
 .or { display: flex; align-items: center; gap: 12px; color: var(--muted, #8e95a8); font-size: 12px; }
 .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-.google-slot { min-height: 44px; display: flex; justify-content: center; }
+/* Google draws the button in an iframe. In a dark page the browser paints such an iframe with an opaque white box
+   unless the page and the iframe use the same colour scheme, so this slot is declared light: the box turns transparent. */
+.google-slot { min-height: 44px; display: flex; justify-content: center; color-scheme: light; border-radius: 99px; overflow: hidden; }
 .switch { text-align: center; font-size: 14px; color: var(--muted, #8e95a8); }
 button.link { background: none; padding: 0; color: #a78bfa; font-weight: 600; }
 @media (max-width: 760px) {
