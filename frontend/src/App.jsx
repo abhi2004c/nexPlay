@@ -10,6 +10,7 @@ import AuthPage from './pages/AuthPage.jsx'
 import Watchlist from './pages/Watchlist.jsx'
 import Profile from './pages/Profile.jsx'
 import Friends from './pages/Friends.jsx'
+import Settings from './pages/Settings.jsx'
 import Messages from './pages/Messages.jsx'
 import Avatar from './components/Avatar.jsx'
 import { ForgotPassword, ResetPassword } from './pages/ResetPages.jsx'
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/reset/:uid/:token" element={<ResetPassword />} />
           <Route path="/u/:username" element={<Profile />} />
           <Route path="/friends" element={<Friends />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/messages/:username" element={<Messages />} />
         </Routes>

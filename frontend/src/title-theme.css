@@ -1,0 +1,27 @@
+/* title page: backdrop hero + tabs */
+.thero { position: relative; border-radius: 20px; overflow: hidden; margin-bottom: 18px; border: 1px solid var(--line); background: #0d0f16; }
+.thero-bg { position: absolute; inset: 0; background-size: cover; background-position: center 25%; filter: blur(2px) brightness(.55) saturate(1.1); transform: scale(1.05); }
+.thero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10, 12, 20, .92) 0%, rgba(10, 12, 20, .55) 55%, rgba(10, 12, 20, .25) 100%), linear-gradient(0deg, rgba(10, 12, 20, .85), transparent 45%); }
+.thero-body { position: relative; z-index: 1; display: flex; gap: 28px; padding: 36px; align-items: flex-end; }
+.thero .poster.big { flex: none; width: 220px; margin: 0; box-shadow: 0 14px 40px rgba(0, 0, 0, .6); border-radius: 12px; overflow: hidden; }
+.thero .poster.big.game { width: 240px; }
+.thero-info { min-width: 0; flex: 1; display: grid; gap: 8px; align-content: end; }
+.thero-info h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); letter-spacing: -.02em; line-height: 1.1; }
+.thero-info p { margin: 0; }
+.kicker { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; font-weight: 700; color: #a78bfa; }
+.ratingrow { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 4px 0; }
+.thero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.thero-actions .btn { text-decoration: none; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 0 0 20px; overflow-x: auto; position: sticky; top: calc(var(--bar-h, 62px)); z-index: 5; background: var(--bg); }
+.tabs button { background: none; color: var(--muted, #8e95a8); border-radius: 0; padding: 12px 18px; border-bottom: 2px solid transparent; font-weight: 600; white-space: nowrap; }
+.tabs button:hover { color: var(--text); }
+.tabs button.on { color: var(--text); border-bottom-color: #7c5cff; }
+.about p { line-height: 1.65; max-width: 80ch; }
+
+@media (max-width: 760px) {
+  .thero-body { flex-direction: column; align-items: flex-start; padding: 20px; gap: 16px; }
+  .thero .poster.big, .thero .poster.big.game { width: 150px; }
+  .thero::after { background: linear-gradient(0deg, rgba(10, 12, 20, .95), rgba(10, 12, 20, .5)); }
+  .tabs button { padding: 10px 14px; }
+}

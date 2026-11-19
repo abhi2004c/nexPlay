@@ -99,3 +99,21 @@ button.link { background: none; padding: 0; color: #a78bfa; font-weight: 600; }
   .messages:not(.open) .chatcol { display: none; }
   .backbtn { display: inline-block; }
 }
+
+/* ---- reviews: spoilers + report, account settings ---- */
+.check { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 14px; }
+.check input { width: auto; margin: 0; }
+.spoiler { display: block; width: 100%; text-align: left; background: repeating-linear-gradient(45deg, #1b1f2d, #1b1f2d 8px, #212638 8px, #212638 16px); color: var(--muted, #8e95a8); border: 1px dashed var(--line); border-radius: 8px; padding: 14px; margin: 8px 0; }
+.spoilertag { color: #f59e0b; font-weight: 700; margin-right: 8px; }
+.reviewfoot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; }
+.reportbtn { opacity: .6; }
+.reportbtn:hover { opacity: 1; }
+.reportform { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.reportform select { padding: 5px 8px; font-size: 13px; }
+.okmsg { color: #34d399; margin: 0; }
+.danger-zone { border-color: rgba(239, 68, 68, .45); }
+.btnlink { display: inline-block; padding: 8px 14px; border-radius: 8px; text-decoration: none; border: 1px solid var(--line); color: inherit; }
+
+/* keep the top bar on one row on laptops: the search box gives way first */
+.hsearch { flex: 1 1 160px; max-width: 340px; min-width: 140px; }
+@media (min-width: 861px) { .bar { flex-wrap: nowrap; } .bar nav { flex-shrink: 0; } }

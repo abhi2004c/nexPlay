@@ -9,7 +9,7 @@ from apps.catalog.cache_utils import invalidate_title
 from apps.catalog.models import Title
 
 from .analysis import sentiment_score
-from .models import Review, ReviewVote
+from .models import Review, ReviewReport, ReviewVote
 
 ONE_REVIEW = 'You have already reviewed this title. Edit your existing review instead.'
 
@@ -130,6 +130,22 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title = instance.title
         instance.delete()
         refresh_title_rating(title)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def report(self, request, pk=None):
+        """Flag someone else's review: {"reason": "spoiler|abuse|spam|other", "note": "..."}. Once per person."""
+        review = self.get_object()
+        if review.user_id == request.user.id:
+            return Response({'detail': 'You cannot report your own review.'}, status=400)
+        reason = request.data.get('reason', 'other')
+        if reason not in dict(ReviewReport.REASONS):
+            reason = 'other'
+        _, created = ReviewReport.objects.get_or_create(
+            review=review, reporter=request.user,
+            defaults={'reason': reason, 'note': str(request.data.get('note', ''))[:300]},
+        )
+        return Response({'detail': 'Thanks, we will take a look.' if created else 'You already reported this review.'},
+                        status=201 if created else 200)
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def vote(self, request, pk=None):

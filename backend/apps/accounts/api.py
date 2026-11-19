@@ -27,6 +27,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'email', 'bio', 'avatar_url', 'list_visibility', 'has_password')
         read_only_fields = ('email',)
 
+    def validate_username(self, value):
+        if User.objects.filter(username__iexact=value).exclude(pk=getattr(self.instance, 'pk', None)).exists():
+            raise serializers.ValidationError('That username is taken.')
+        return value
+
     def validate_list_visibility(self, value):
         if value not in ('private', 'friends'):  # lists are never public
             raise serializers.ValidationError('Choose "Only me" or "My friends".')
@@ -167,3 +172,42 @@ class GoogleLoginView(APIView):
             user.set_unusable_password()
             user.save()
         return Response({'access': _token_for(user)})
+
+
+class ChangePasswordView(APIView):
+    """POST {current_password, new_password}. Accounts made with Google (no password yet) can set one without the current."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.has_usable_password() and not user.check_password(request.data.get('current_password', '')):
+            return Response({'detail': 'Your current password is wrong.'}, status=400)
+        new = request.data.get('new_password', '')
+        try:
+            validate_password(new, user)
+        except Exception as e:
+            return Response({'detail': ' '.join(getattr(e, 'messages', [str(e)]))}, status=400)
+        user.set_password(new)
+        user.save()
+        return Response({'detail': 'Password changed.'})
+
+
+class DeleteAccountView(APIView):
+    """POST {password} (or {confirm: <username>} for Google accounts). Removes the account and everything it posted."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from apps.reviews.api import refresh_title_rating  # imported here to avoid a circular import
+        user = request.user
+        if user.has_usable_password():
+            if not user.check_password(request.data.get('password', '')):
+                return Response({'detail': 'Wrong password.'}, status=400)
+        elif request.data.get('confirm') != user.username:
+            return Response({'detail': 'Type your username to confirm.'}, status=400)
+        titles = list({r.title for r in user.reviews.select_related('title')})
+        user.delete()
+        for t in titles:  # their reviews are gone, so the averages must be recomputed
+            refresh_title_rating(t)
+        return Response(status=204)

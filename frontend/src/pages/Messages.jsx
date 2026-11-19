@@ -58,30 +58,38 @@ function Chat({ username, onActivity }) {
   const lastId = useRef(0)
   const log = useRef(null)
 
-  const poll = useCallback(async (first) => {
+  // `wait`: ask the server to hold the request until something new arrives (instant delivery)
+  const poll = useCallback(async (first, wait, stale) => {
     try {
-      const d = await api(`/messages/with/${encodeURIComponent(username)}/${first ? '' : `?after=${lastId.current}`}`)
+      const d = await api(`/messages/with/${encodeURIComponent(username)}/${first ? '' : `?after=${lastId.current}${wait ? '&wait=1' : ''}`}`)
+      if (stale?.()) return
       setFriend(d.friend)
       setError('')
       if (first) setMsgs(d.messages)
       else if (d.messages.length) setMsgs((prev) => [...prev, ...d.messages.filter((m) => !prev.some((p) => p.id === m.id))])
       if (d.messages.length) { lastId.current = Math.max(lastId.current, ...d.messages.map((m) => m.id)); onActivity() }
-    } catch (e) { setError(e.message) }
+    } catch (e) { if (!stale?.()) setError(e.message) }
   }, [username, onActivity])
 
   useEffect(() => {
+    let alive = true
+    const stale = () => !alive
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
     lastId.current = 0
     setMsgs([]); setFriend(null); setTitle(null); setText('')
-    poll(true)
-    const id = setInterval(() => { if (!document.hidden) poll(false) }, 2000)
-    const onVisible = () => { if (!document.hidden) poll(false) } // catch up the moment you return to the tab
+    ;(async () => {
+      await poll(true, false, stale)
+      while (alive) {
+        if (document.hidden) { await sleep(1500); continue }
+        const started = Date.now()
+        await poll(false, true, stale) // waits on the server until a message arrives (or ~20s)
+        // answered quickly with nothing new (server busy, or an error): pause so we never hammer it
+        if (alive && Date.now() - started < 1500) await sleep(2000)
+      }
+    })()
+    const onVisible = () => { if (!document.hidden) poll(false, false, stale) }
     document.addEventListener('visibilitychange', onVisible)
-    window.addEventListener('focus', onVisible)
-    return () => {
-      clearInterval(id)
-      document.removeEventListener('visibilitychange', onVisible)
-      window.removeEventListener('focus', onVisible)
-    }
+    return () => { alive = false; document.removeEventListener('visibilitychange', onVisible) }
   }, [poll])
 
   useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }) }, [msgs.length])

@@ -15,6 +15,7 @@ const when = (iso) => new Date(iso).toLocaleDateString(undefined, { year: 'numer
 function ReviewForm({ initial, submitLabel, onSubmit, onCancel }) {
   const [rating, setRating] = useState(initial?.rating ?? 8)
   const [body, setBody] = useState(initial?.body ?? '')
+  const [spoilers, setSpoilers] = useState(initial?.contains_spoilers ?? false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -22,7 +23,7 @@ function ReviewForm({ initial, submitLabel, onSubmit, onCancel }) {
     e.preventDefault()
     setBusy(true); setError('')
     try {
-      await onSubmit({ rating: Number(rating), body })
+      await onSubmit({ rating: Number(rating), body, contains_spoilers: spoilers })
     } catch (err) {
       setError(err.message)
       setBusy(false)
@@ -39,10 +40,50 @@ function ReviewForm({ initial, submitLabel, onSubmit, onCancel }) {
         / 10
       </label>
       <textarea placeholder="Write your review…" value={body} onChange={(e) => setBody(e.target.value)} />
+      <label className="check">
+        <input type="checkbox" checked={spoilers} onChange={(e) => setSpoilers(e.target.checked)} /> This review contains spoilers
+      </label>
       {error && <p className="error">{error}</p>}
       <button className="btn" disabled={busy}>{busy ? 'Saving…' : submitLabel}</button>{' '}
       {onCancel && <button type="button" className="ghost" onClick={onCancel}>Cancel</button>}
     </form>
+  )
+}
+
+// A review marked as containing spoilers stays blurred until the reader chooses to show it.
+function ReviewBody({ r }) {
+  const [shown, setShown] = useState(false)
+  if (!r.contains_spoilers || shown) return <p>{r.body || <span className="muted">No written review.</span>}</p>
+  return (
+    <button type="button" className="spoiler" onClick={() => setShown(true)}>
+      <span className="spoilertag">⚠ Spoilers</span> Click to show this review
+    </button>
+  )
+}
+
+const REASONS = [['spoiler', 'Spoilers that are not marked'], ['abuse', 'Abusive or hateful'], ['spam', 'Spam or advertising'], ['other', 'Something else']]
+
+function ReportButton({ r }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('spoiler')
+  const [msg, setMsg] = useState('')
+  async function send() {
+    try {
+      const d = await api(`/reviews/${r.id}/report/`, { method: 'POST', body: { reason } })
+      setMsg(d.detail)
+    } catch (e) { setMsg(e.message) }
+    setOpen(false)
+  }
+  if (msg) return <span className="muted small">{msg}</span>
+  if (!open) return <button className="ghost small reportbtn" onClick={() => setOpen(true)}>Report</button>
+  return (
+    <span className="reportform">
+      <select aria-label="Reason" value={reason} onChange={(e) => setReason(e.target.value)}>
+        {REASONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      <button className="danger" onClick={send}>Send report</button>
+      <button className="ghost" onClick={() => setOpen(false)}>Cancel</button>
+    </span>
   )
 }
 
@@ -153,6 +194,7 @@ export default function Reviews({ slug, onChange }) {
             <ReviewForm initial={mine} submitLabel="Save changes" onSubmit={save} onCancel={() => setEditing(false)} />
           ) : (
             <>
+              {mine.contains_spoilers && <p className="muted small">Marked as containing spoilers: others see it hidden until they click.</p>}
               <p>{mine.body || <span className="muted">No written review.</span>}</p>
               <p className="actions">
                 <button className="ghost" onClick={() => { setEditing(true); setConfirmDelete(false) }}>Edit</button>
@@ -185,8 +227,11 @@ export default function Reviews({ slug, onChange }) {
         <div className="review" key={r.id}>
           <strong><Link to={`/u/${r.username}`}>{r.username}</Link></strong> <span className="score">★ {r.rating}</span>
           <span className="muted small"> · {when(r.created_at)}</span>
-          <p>{r.body}</p>
-          <VoteButtons r={r} user={user} onVote={vote} />
+          <ReviewBody r={r} />
+          <div className="reviewfoot">
+            <VoteButtons r={r} user={user} onVote={vote} />
+            {user && <ReportButton r={r} />}
+          </div>
         </div>
       ))}
       {items.length === 0 && !mine && <p className="muted">No reviews yet. Be the first.</p>}

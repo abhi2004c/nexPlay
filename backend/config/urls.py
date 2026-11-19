@@ -3,7 +3,8 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from apps.accounts.api import (GoogleLoginView, MeView, PasswordResetConfirmView, PasswordResetRequestView,
+from django.http import JsonResponse
+from apps.accounts.api import (ChangePasswordView, DeleteAccountView, GoogleLoginView, MeView, PasswordResetConfirmView, PasswordResetRequestView,
                                RegisterView)
 from apps.community.social import (ChatView, ConversationsView, FriendAcceptView, FriendDeleteView,
                                    FriendRequestView, FriendsView, ProfileView, UnreadView)
@@ -20,12 +21,19 @@ router.register('watchlist', WatchlistViewSet, basename='watchlist')
 router.register('threads', ThreadViewSet, basename='thread')
 router.register('comments', CommentViewSet, basename='comment')
 
+def health(request):  # no database: cheap enough for an uptime pinger every few minutes
+    return JsonResponse({'status': 'ok'})
+
+
 urlpatterns = [
+    path('api/health/', health),
     path('admin/', admin.site.urls),
     path('api/auth/register/', RegisterView.as_view()),
     path('api/auth/token/', TokenObtainPairView.as_view()),
     path('api/auth/token/refresh/', TokenRefreshView.as_view()),
     path('api/auth/me/', MeView.as_view()),
+    path('api/auth/change-password/', ChangePasswordView.as_view()),
+    path('api/auth/delete-account/', DeleteAccountView.as_view()),
     path('api/auth/google/', GoogleLoginView.as_view()),
     path('api/auth/password-reset/', PasswordResetRequestView.as_view()),
     path('api/auth/password-reset/confirm/', PasswordResetConfirmView.as_view()),

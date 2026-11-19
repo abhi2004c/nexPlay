@@ -34,3 +34,24 @@ class ReviewVote(models.Model):
             models.UniqueConstraint(fields=['review', 'user'], name='one_vote_per_user_review'),
             models.CheckConstraint(condition=models.Q(value__in=[1, -1]), name='vote_value_is_plus_or_minus_one'),
         ]
+
+
+class ReviewReport(models.Model):
+    """A user flagging someone else's review for the moderators (visible in the Django admin)."""
+
+    REASONS = [
+        ('spoiler', 'Spoilers not marked'),
+        ('abuse', 'Abusive or hateful'),
+        ('spam', 'Spam or advertising'),
+        ('other', 'Something else'),
+    ]
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='reports')
+    reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='review_reports')
+    reason = models.CharField(max_length=10, choices=REASONS, default='other')
+    note = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['review', 'reporter'], name='one_report_per_user_review')]
+        ordering = ['resolved', '-created_at']

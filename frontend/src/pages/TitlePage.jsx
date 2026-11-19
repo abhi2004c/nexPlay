@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth.jsx'
 import TitleCard from '../components/TitleCard.jsx'
@@ -16,6 +16,9 @@ import Reviews from '../components/Reviews.jsx'
 export default function TitlePage() {
   const { slug } = useParams()
   const { user } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const tab = ['overview', 'reviews', 'discussion'].includes(params.get('tab')) ? params.get('tab') : 'overview'
+  const setTab = (id) => setParams(id === 'overview' ? {} : { tab: id }, { replace: true })
   const [t, setT] = useState(null)
   const [threads, setThreads] = useState([])
   const [subject, setSubject] = useState('')
@@ -67,116 +70,148 @@ export default function TitlePage() {
 
   if (!t) return <p className="muted">{msg || 'Loading…'}</p>
 
+  const bg = t.backdrop_url || t.poster_url
+  const tabs = [
+    ['overview', 'Overview'],
+    ['reviews', `Reviews${t.rating_count ? ` · ${t.rating_count}` : ''}`],
+    ['discussion', `Discussion${threads.length ? ` · ${threads.length}` : ''}`],
+  ]
+
   return (
     <>
-      <div className="detail">
-        <div className={`poster big ${t.media_type}`}>
-          {t.poster_url ? <img src={t.poster_url} alt="" /> : <span>{t.name[0]}</span>}
-        </div>
-        <div>
-          <h1>{t.name}</h1>
-          <p className="muted">
-            {t.media_type === 'movie' ? 'Movie' : 'Game'} · {t.release_date?.slice(0, 4)} · {t.creator}
-            {t.runtime_minutes ? ` · ${t.runtime_minutes} min` : ''}
-            {t.platforms ? ` · ${t.platforms}` : ''}
-          </p>
-          <p>{t.genres.map((g) => <span className="tag" key={g}>{g}</span>)}</p>
-          <p style={{ whiteSpace: 'pre-line' }}>{cleanDescription(t.description)}</p>
+      <header className="thero">
+        {bg && <div className="thero-bg" style={{ backgroundImage: `url(${bg})` }} aria-hidden="true" />}
+        <div className="thero-body">
+          <div className={`poster big ${t.media_type}`}>
+            {t.poster_url ? <img src={t.poster_url} alt="" /> : <span>{t.name[0]}</span>}
+          </div>
+          <div className="thero-info">
+            <p className="kicker">{t.media_type === 'movie' ? 'Movie' : 'Game'}</p>
+            <h1>{t.name}</h1>
+            <p className="muted">
+              {[t.release_date?.slice(0, 4), t.creator, t.runtime_minutes ? `${t.runtime_minutes} min` : '', t.platforms].filter(Boolean).join(' · ')}
+            </p>
+            <p>{t.genres.map((g) => <span className="tag" key={g}>{g}</span>)}</p>
+            <div className="ratingrow">
           {t.media_type === 'movie' && info?.imdb?.score != null && (
-            <p className="score">
-              <a className="srctag imdb" href={info.imdb.url} target="_blank" rel="noreferrer">IMDb</a>
-              ★ {info.imdb.score}/10 {info.imdb.votes && <span className="muted">{info.imdb.votes} votes</span>}
-            </p>
-          )}
-          {t.media_type === 'movie' && info?.tmdb?.score != null && (
-            <p className="score" title="Average rating from TMDB members">
-              <a className="srctag tmdb" href={info.tmdb.url} target="_blank" rel="noreferrer">TMDB</a>
-              ★ {info.tmdb.score}/10 <span className="muted">{info.tmdb.votes.toLocaleString()} votes</span>
-            </p>
-          )}
-          {t.media_type === 'game' && t.external_rating != null && (() => {
-            const pct = Math.round(t.external_rating * 10)
-            return (
-              <a className="steamrating" href={`https://store.steampowered.com/app/${t.steam_app_id}#app_reviews_hash`} target="_blank" rel="noreferrer" title="Open the reviews on Steam">
-                <SteamIcon size={30} />
-                <span>
-                  <strong className={steamTone(pct)}>{steamLabel(pct, t.external_votes) || `${pct}% positive`}</strong>
-                  <span className="muted small">{pct}% of {t.external_votes.toLocaleString()} Steam reviews are positive (all languages)</span>
-                </span>
-                <b className={`pct ${steamTone(pct)}`}>{pct}%</b>
-              </a>
-            )
-          })()}
-          {t.rating_count > 0 ? (
-            <p className="score">
-              <span className="srctag nex">NexPlay</span>
-              ★ {t.avg_rating} <span className="muted">{t.rating_count} review{t.rating_count === 1 ? '' : 's'}</span>
-            </p>
-          ) : (
-            <p className="muted">No NexPlay reviews yet. Be the first to review it.</p>
-          )}
-          {t.metacritic != null && (
-            <p>
-              <a className="metabadge" href={t.metacritic_url || undefined} target="_blank" rel="noreferrer" title="Metacritic score">
-                <b className={t.metacritic >= 75 ? 'good' : t.metacritic >= 50 ? 'mid' : 'bad'}>{t.metacritic}</b> Metacritic
-              </a>
-            </p>
-          )}
-          {user && (
-            <button
-              className="btn"
-              onClick={run(() => api('/watchlist/', { method: 'POST', body: { title_slug: slug } }), 'Added to watchlist')}
-            >
-              + Watchlist
-            </button>
-          )}
-          {msg && <p className="muted">{msg}</p>}
-        </div>
-      </div>
-
-      {t.media_type === 'movie' && <MovieTrailer info={info} />}
-      {t.media_type === 'movie' && <WatchProviders slug={slug} />}
-      {t.media_type === 'game' && <Media slug={slug} />}
-      {t.media_type === 'game' && <Deals slug={slug} />}
-      {t.media_type === 'game' && t.steam_app_id && <SteamReviews slug={slug} />}
-
-      {analysis && (
-        <section className="panel">
-          <h2>Review analysis</h2>
-          <p>{analysis.summary}</p>
-          {analysis.positive + analysis.neutral + analysis.negative > 0 && (
-            <div className="sentbar">
-              {['positive', 'neutral', 'negative'].map((k) => (
-                <span key={k} className={k} style={{ flex: analysis[k] }} title={`${k}: ${analysis[k]}`} />
-              ))}
+                <p className="score">
+                  <a className="srctag imdb" href={info.imdb.url} target="_blank" rel="noreferrer">IMDb</a>
+                  ★ {info.imdb.score}/10 {info.imdb.votes && <span className="muted">{info.imdb.votes} votes</span>}
+                </p>
+              )}
+              {t.media_type === 'movie' && info?.tmdb?.score != null && (
+                <p className="score" title="Average rating from TMDB members">
+                  <a className="srctag tmdb" href={info.tmdb.url} target="_blank" rel="noreferrer">TMDB</a>
+                  ★ {info.tmdb.score}/10 <span className="muted">{info.tmdb.votes.toLocaleString()} votes</span>
+                </p>
+              )}
+              {t.media_type === 'game' && t.external_rating != null && (() => {
+                const pct = Math.round(t.external_rating * 10)
+                return (
+                  <a className="steamrating" href={`https://store.steampowered.com/app/${t.steam_app_id}#app_reviews_hash`} target="_blank" rel="noreferrer" title="Open the reviews on Steam">
+                    <SteamIcon size={30} />
+                    <span>
+                      <strong className={steamTone(pct)}>{steamLabel(pct, t.external_votes) || `${pct}% positive`}</strong>
+                      <span className="muted small">{pct}% of {t.external_votes.toLocaleString()} Steam reviews are positive (all languages)</span>
+                    </span>
+                    <b className={`pct ${steamTone(pct)}`}>{pct}%</b>
+                  </a>
+                )
+              })()}
+              {t.rating_count > 0 ? (
+                <p className="score">
+                  <span className="srctag nex">NexPlay</span>
+                  ★ {t.avg_rating} <span className="muted">{t.rating_count} review{t.rating_count === 1 ? '' : 's'}</span>
+                </p>
+              ) : (
+                <p className="muted">No NexPlay reviews yet. Be the first to review it.</p>
+              )}
+              {t.metacritic != null && (
+                <p>
+                  <a className="metabadge" href={t.metacritic_url || undefined} target="_blank" rel="noreferrer" title="Metacritic score">
+                    <b className={t.metacritic >= 75 ? 'good' : t.metacritic >= 50 ? 'mid' : 'bad'}>{t.metacritic}</b> Metacritic
+                  </a>
+                </p>
+              )}
             </div>
-          )}
-          <p>{analysis.keywords.map((k) => <span className="tag" key={k}>{k}</span>)}</p>
-        </section>
+            <div className="thero-actions">
+              {user ? (
+                <button className="btn" onClick={run(() => api('/watchlist/', { method: 'POST', body: { title_slug: slug } }), 'Added to your watchlist')}>
+                  + Watchlist
+                </button>
+              ) : (
+                <Link className="btn" to="/login">Log in to review &amp; save</Link>
+              )}
+              <button className="ghost" onClick={() => setTab('reviews')}>Write a review</button>
+            </div>
+            {msg && <p className="muted" role="status">{msg}</p>}
+          </div>
+        </div>
+      </header>
+
+      <nav className="tabs" role="tablist" aria-label="Sections">
+        {tabs.map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{label}</button>
+        ))}
+      </nav>
+
+      {tab === 'overview' && (
+        <>
+          <section className="panel about">
+            <h2>About</h2>
+            <p style={{ whiteSpace: 'pre-line' }}>{cleanDescription(t.description) || 'No description yet.'}</p>
+          </section>
+          {t.media_type === 'movie' && <MovieTrailer info={info} />}
+          {t.media_type === 'movie' && <WatchProviders slug={slug} />}
+          {t.media_type === 'game' && <Media slug={slug} />}
+          {t.media_type === 'game' && <Deals slug={slug} />}
+      {analysis && (
+          <section className="panel">
+            <h2>Review analysis</h2>
+            <p>{analysis.summary}</p>
+            {analysis.positive + analysis.neutral + analysis.negative > 0 && (
+              <div className="sentbar">
+                {['positive', 'neutral', 'negative'].map((k) => (
+                  <span key={k} className={k} style={{ flex: analysis[k] }} title={`${k}: ${analysis[k]}`} />
+                ))}
+              </div>
+            )}
+            <p>{analysis.keywords.map((k) => <span className="tag" key={k}>{k}</span>)}</p>
+          </section>
+        )}
+
+        </>
       )}
 
-      <Reviews slug={slug} onChange={() => load().catch(() => {})} />
-      {t.media_type === 'movie' && <TmdbReviews info={info} />}
+      {tab === 'reviews' && (
+        <>
+          <Reviews slug={slug} onChange={() => load().catch(() => {})} />
+          {t.media_type === 'game' && t.steam_app_id && <SteamReviews slug={slug} />}
+          {t.media_type === 'movie' && <TmdbReviews info={info} />}
+        </>
+      )}
 
+      {tab === 'discussion' && (
       <section className="panel">
-        <h2>Discussion</h2>
-        {user && (
-          <form
-            onSubmit={run(() =>
-              api('/threads/', { method: 'POST', body: { title_slug: slug, subject, body: tbody } }).then(() => {
-                setSubject('')
-                setTbody('')
-              }),
-            )}
-          >
-            <input placeholder="Thread subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
-            <textarea placeholder="Start a conversation…" value={tbody} onChange={(e) => setTbody(e.target.value)} required />
-            <button className="btn">Start thread</button>
-          </form>
-        )}
-        {threads.map((th) => <Thread key={th.id} th={th} user={user} />)}
-        {threads.length === 0 && <p className="muted">No threads yet.</p>}
-      </section>
+          <h2>Discussion</h2>
+          {user && (
+            <form
+              onSubmit={run(() =>
+                api('/threads/', { method: 'POST', body: { title_slug: slug, subject, body: tbody } }).then(() => {
+                  setSubject('')
+                  setTbody('')
+                }),
+              )}
+            >
+              <input placeholder="Thread subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
+              <textarea placeholder="Start a conversation…" value={tbody} onChange={(e) => setTbody(e.target.value)} required />
+              <button className="btn">Start thread</button>
+            </form>
+          )}
+          {threads.map((th) => <Thread key={th.id} th={th} user={user} />)}
+          {threads.length === 0 && <p className="muted">No threads yet.</p>}
+        </section>
+      )}
 
       {similar.length > 0 && (
         <section className="rail">

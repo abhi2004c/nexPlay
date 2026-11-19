@@ -1,5 +1,8 @@
 """Profiles, friends and chat."""
 
+import os
+import threading
+
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -15,6 +18,34 @@ from apps.reviews.models import Review
 from .models import Friendship, Message, WatchlistItem
 
 IsAuth = [permissions.IsAuthenticated]
+
+# Near-instant chat without extra infrastructure: a reader with nothing new waits (without touching the
+# database) until someone sends a message, then answers at once. This works because the free host runs ONE
+# server process (render.yaml starts gunicorn with one worker and several threads). Only a few readers may wait at a time so the worker threads
+# are never all tied up; everyone else falls back to ordinary quick polling.
+_new_message = threading.Condition()
+_message_counter = 0
+_wait_slots = threading.BoundedSemaphore(4)
+LONG_POLL_SECONDS = int(os.environ.get('CHAT_WAIT_SECONDS', '20'))
+
+
+def _announce_message():
+    global _message_counter
+    with _new_message:
+        _message_counter += 1
+        _new_message.notify_all()
+
+
+def _wait_for_message(seen):
+    """Block until a message is sent after counter value `seen`, or time runs out. False if no slot was free."""
+    if not _wait_slots.acquire(blocking=False):
+        return False
+    try:
+        with _new_message:  # `seen` was read before the database check, so a message sent in between is not missed
+            _new_message.wait_for(lambda: _message_counter != seen, timeout=LONG_POLL_SECONDS)
+        return True
+    finally:
+        _wait_slots.release()
 
 
 def friendship_between(a, b):
@@ -75,7 +106,7 @@ class ProfileView(APIView):
         # when hidden, nothing about the list is revealed: no titles and no counts
         reviews = Review.objects.filter(user=owner).select_related('title').order_by('-created_at')[:10]
         data['reviews'] = [
-            {'id': r.id, 'rating': r.rating, 'body': r.body, 'created_at': r.created_at,
+            {'id': r.id, 'rating': r.rating, 'body': r.body, 'contains_spoilers': r.contains_spoilers, 'created_at': r.created_at,
              'title_slug': r.title.slug, 'title_name': r.title.name, 'poster_url': r.title.poster_url,
              'media_type': r.title.media_type}
             for r in reviews
@@ -202,18 +233,26 @@ class ChatView(APIView):
             raise PermissionDenied('You can only chat with friends.')
         return other
 
+    def _new_since(self, me, other, after):
+        qs = Message.objects.filter(Q(sender=me, recipient=other) | Q(sender=other, recipient=me), id__gt=after)
+        return list(qs.select_related('title'))
+
     def get(self, request, username):
         other = self._friend(request, username)
         me = request.user
-        Message.objects.filter(sender=other, recipient=me, read_at__isnull=True).update(read_at=timezone.now())
-        qs = Message.objects.filter(Q(sender=me, recipient=other) | Q(sender=other, recipient=me)).select_related('title')
         after = request.query_params.get('after')
         if after and after.isdigit():
-            qs = qs.filter(id__gt=int(after))
+            after = int(after)
+            seen = _message_counter
+            found = self._new_since(me, other, after)
+            if not found and request.query_params.get('wait') and _wait_for_message(seen):
+                found = self._new_since(me, other, after)  # woke up: a message was sent somewhere, maybe to us
+            msgs = found
         else:
-            qs = qs.order_by('-created_at')[:100]
-            qs = sorted(qs, key=lambda m: m.id)  # latest 100, oldest first
-        return Response({'friend': mini(other), 'messages': [message_json(m, me) for m in qs]})
+            qs = Message.objects.filter(Q(sender=me, recipient=other) | Q(sender=other, recipient=me)).select_related('title')
+            msgs = sorted(qs.order_by('-created_at')[:100], key=lambda m: m.id)  # latest 100, oldest first
+        Message.objects.filter(sender=other, recipient=me, read_at__isnull=True).update(read_at=timezone.now())
+        return Response({'friend': mini(other), 'messages': [message_json(m, me) for m in msgs]})
 
     def post(self, request, username):
         other = self._friend(request, username)
@@ -224,4 +263,5 @@ class ChatView(APIView):
         if not body and not title:
             return Response({'detail': 'Write something or share a title.'}, status=400)
         m = Message.objects.create(sender=request.user, recipient=other, body=body, title=title)
+        _announce_message()
         return Response(message_json(m, request.user), status=201)

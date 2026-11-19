@@ -108,7 +108,10 @@ export default function Profile() {
             Joined {new Date(p.joined).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} · {p.friend_count} friend{p.friend_count === 1 ? '' : 's'}
           </p>
         </div>
-        <div className="pactions"><FriendAction p={p} reload={load} /></div>
+        <div className="pactions">
+          <FriendAction p={p} reload={load} />
+          {p.relation === 'self' && <Link className="ghost btnlink" to="/settings">Account settings</Link>}
+        </div>
       </header>
 
       {p.relation === 'self' && <Settings profile={p} onSaved={load} />}
@@ -143,7 +146,7 @@ export default function Profile() {
               {r.poster_url ? <img src={r.poster_url} alt="" loading="lazy" /> : <span className="noimg">{r.title_name[0]}</span>}
               <div>
                 <strong>{r.title_name}</strong> <span className="score">★ {r.rating}</span>
-                <p>{r.body.length > 220 ? `${r.body.slice(0, 220)}…` : r.body}</p>
+                <p>{r.contains_spoilers ? <em className="muted">⚠ Contains spoilers: open the title to read it.</em> : r.body.length > 220 ? `${r.body.slice(0, 220)}…` : r.body}</p>
               </div>
             </Link>
           ))}
