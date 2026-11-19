@@ -4,6 +4,7 @@ import re
 import urllib.parse
 import urllib.request
 
+from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
@@ -88,7 +89,10 @@ class PasswordResetRequestView(APIView):
         for user in User.objects.filter(email__iexact=email, is_active=True)[:1]:
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)  # expires after 3 days, dies once the password changes
-            base = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+            # link back to the site the person is actually on (the browser tells us), else FRONTEND_URL
+            origin = (request.headers.get('Origin') or '').rstrip('/')
+            allowed = [o.rstrip('/') for o in settings.CORS_ALLOWED_ORIGINS]
+            base = origin if origin in allowed else os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
             send_email(
                 user.email, 'Reset your NexPlay password',
                 f'Hi {user.username},\n\nUse this link to choose a new password:\n{base}/reset/{uid}/{token}\n\n'

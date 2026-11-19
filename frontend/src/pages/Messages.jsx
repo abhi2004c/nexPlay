@@ -73,8 +73,15 @@ function Chat({ username, onActivity }) {
     lastId.current = 0
     setMsgs([]); setFriend(null); setTitle(null); setText('')
     poll(true)
-    const id = setInterval(() => { if (!document.hidden) poll(false) }, 4000)
-    return () => clearInterval(id)
+    const id = setInterval(() => { if (!document.hidden) poll(false) }, 2000)
+    const onVisible = () => { if (!document.hidden) poll(false) } // catch up the moment you return to the tab
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
   }, [poll])
 
   useEffect(() => { log.current?.scrollTo({ top: log.current.scrollHeight }) }, [msgs.length])
@@ -138,7 +145,7 @@ export default function Messages() {
     document.title = 'Messages — NexPlay'
     if (!user) return
     load()
-    const id = setInterval(() => { if (!document.hidden) load() }, 10000)
+    const id = setInterval(() => { if (!document.hidden) load() }, 6000)
     return () => clearInterval(id)
   }, [user, load])
 

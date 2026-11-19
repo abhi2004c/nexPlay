@@ -21,7 +21,7 @@ function useUnread(user) {
     if (!user) { setN(0); return }
     const load = () => { if (!document.hidden) api('/messages/unread/').then((d) => setN(d.unread)).catch(() => {}) }
     load()
-    const id = setInterval(load, 15000)
+    const id = setInterval(load, 8000)
     return () => clearInterval(id)
   }, [user])
   return n
