@@ -7,13 +7,15 @@ which is what you want in local development.
 
 import json
 import os
+import re
 import urllib.request
 
 
 def send_email(to: str, subject: str, text: str) -> bool:
     url = os.environ.get('APPS_SCRIPT_URL', '')
     if not url:
-        print(f'\n--- email (not sent: APPS_SCRIPT_URL not set) ---\nTo: {to}\n{subject}\n\n{text}\n---')
+        link = re.search(r'https?://\S+', text)  # the one thing you need from the email
+        print(f'[email not sent] {subject} for {to} -> {link.group(0) if link else text}')
         return False
     payload = {'secret': os.environ.get('APPS_SCRIPT_SECRET', ''), 'to': to, 'subject': subject, 'body': text}
     req = urllib.request.Request(url, data=json.dumps(payload).encode(), method='POST',
