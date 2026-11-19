@@ -141,7 +141,7 @@ The app runs at http://localhost:5173.
 | `VITE_API_URL` | Backend API address, ending in `/api` |
 | `VITE_GOOGLE_CLIENT_ID` | Google sign-in (optional; the button is hidden without it) |
 
-Never commit a real `.env` file. It is already in `.gitignore`.
+Never commit a real `.env` file.
 
 ### Password-reset emails
 
