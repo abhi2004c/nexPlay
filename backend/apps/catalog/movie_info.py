@@ -15,6 +15,7 @@ from . import importer
 from .net import get_json
 
 OMDB = 'https://www.omdbapi.com/?'
+TMDB_IMG = 'https://image.tmdb.org/t/p'
 TTL = 6 * 60 * 60
 
 
@@ -27,6 +28,21 @@ def _trailer(videos):
     )
     best = sorted(yt, key=rank)[:1]
     return {'key': best[0]['key'], 'name': best[0].get('name', 'Trailer')} if best else None
+
+
+def _videos(videos, limit=12):
+    """Every YouTube video worth showing, best first: trailers, teasers, then clips and featurettes."""
+    order = {'Trailer': 0, 'Teaser': 1, 'Clip': 2, 'Featurette': 3, 'Behind the Scenes': 4}
+    yt = [v for v in videos if v.get('site') == 'YouTube' and v.get('key') and v.get('type') in order]
+    yt.sort(key=lambda v: (order[v['type']], 0 if v.get('official') else 1))
+    return [{'key': v['key'], 'name': v.get('name') or v['type'], 'type': v['type']} for v in yt[:limit]]
+
+
+def _images(images, limit=14):
+    """Widescreen stills (TMDB backdrops), highest voted first."""
+    backs = sorted((images or {}).get('backdrops', []), key=lambda b: -(b.get('vote_average') or 0))
+    return [{'thumb': f"{TMDB_IMG}/w300{b['file_path']}", 'full': f"{TMDB_IMG}/w1280{b['file_path']}"}
+            for b in backs[:limit] if b.get('file_path')]
 
 
 def _clean(text, limit=700):
@@ -57,7 +73,7 @@ def _omdb(imdb_id):
 
 
 def build(title):
-    d = importer.tmdb(f'/movie/{title.external_id}', append_to_response='videos,reviews', language='en-US')
+    d = importer.tmdb(f'/movie/{title.external_id}', append_to_response='videos,reviews,images', include_image_language='en,null', language='en-US')
     imdb_id = d.get('imdb_id') or ''
     imdb_url = f'https://www.imdb.com/title/{imdb_id}/' if imdb_id else None
     omdb = _omdb(imdb_id)
@@ -71,6 +87,8 @@ def build(title):
     return {
         'reviews': reviews,
         'trailer': _trailer((d.get('videos') or {}).get('results', [])),
+        'videos': _videos((d.get('videos') or {}).get('results', [])),
+        'images': _images(d.get('images')),
         'tmdb': {
             'score': round(d['vote_average'], 1) if d.get('vote_count') else None,
             'votes': d.get('vote_count') or 0,

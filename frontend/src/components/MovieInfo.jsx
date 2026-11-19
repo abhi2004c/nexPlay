@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import Gallery from './Gallery.jsx'
 
 // Reviews written by TMDB members, each with that member's own rating. Shown under NexPlay's reviews.
 export function TmdbReviews({ info }) {
@@ -24,31 +24,22 @@ export function TmdbReviews({ info }) {
   )
 }
 
-// Trailer for a movie page (YouTube, loaded only when played). Ratings live in the page header.
+// Trailers, teasers and stills for a movie page (YouTube videos load only when played). Ratings live in the header.
 export default function MovieTrailer({ info }) {
-  const [playing, setPlaying] = useState(false)
-  const trailer = info?.trailer
-  if (!trailer) return null
-
+  if (!info) return null
+  // older cached answers only have the single `trailer`
+  const videos = info.videos?.length ? info.videos : info.trailer ? [info.trailer] : []
+  const images = info.images || []
+  if (videos.length === 0 && images.length === 0) return null
+  const tmdb = info.tmdb?.url
   return (
-    <section className="panel">
-      <h2>Trailer</h2>
-      {playing ? (
-        <div className="trailer yt">
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${trailer.key}?autoplay=1&rel=0`}
-            title={trailer.name}
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            allowFullScreen
-          />
-        </div>
-      ) : (
-        <button className="trailer thumb" onClick={() => setPlaying(true)} aria-label={`Play ${trailer.name}`}>
-          <img src={`https://i.ytimg.com/vi/${trailer.key}/hqdefault.jpg`} alt="" />
-          <span className="play">▶</span>
-          <em>{trailer.name}</em>
-        </button>
-      )}
-    </section>
+    <Gallery
+      key={tmdb}
+      title={images.length > 0 ? 'Trailers & stills' : 'Trailer'}
+      videos={videos}
+      images={images}
+      imageLabel="Stills"
+      credit={tmdb ? <> · videos from YouTube, images from <a href={tmdb} target="_blank" rel="noreferrer">TMDB</a></> : null}
+    />
   )
 }

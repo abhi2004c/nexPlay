@@ -158,11 +158,11 @@ export default function TitlePage() {
       {tab === 'overview' && (
         <>
           {t.media_type === 'game' && <Media slug={slug} />}
+          {t.media_type === 'movie' && <MovieTrailer info={info} />}
           <section className="panel about">
             <h2>About</h2>
             <p style={{ whiteSpace: 'pre-line' }}>{cleanDescription(t.description) || 'No description yet.'}</p>
           </section>
-          {t.media_type === 'movie' && <MovieTrailer info={info} />}
           {t.media_type === 'movie' && <WatchProviders slug={slug} />}
           {t.media_type === 'game' && <Deals slug={slug} />}
       {analysis && (

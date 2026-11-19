@@ -46,3 +46,4 @@
 /* keep the stage a comfortable size on wide screens */
 .gallery .stage, .gallery .thumbstrip { max-width: 960px; margin-inline: auto; }
 .stage-poster em { text-align: left; }
+.stage iframe.stage-video { border: 0; }
